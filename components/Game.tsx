@@ -216,10 +216,25 @@ function CharacterScene({ mood }: { mood: OutcomeMood | null }) {
   const womanOffset = mood === 'bad' ? 'translate(632 66) rotate(3 105 140)' : mood === 'good' ? 'translate(604 66) rotate(-1 105 140)' : 'translate(618 66)';
   const womanCoat = mood === 'bad' ? '#f7eef2' : mood === 'good' ? '#fff8eb' : '#f8f1e7';
   const womanAccent = mood === 'good' ? '#0f766e' : mood === 'bad' ? '#be123c' : '#7c3aed';
+  const artBasePath = '/pua_memorial/assets/visual-novel';
+  const backgroundAsset = `${artBasePath}/bg-shibuya-night.png`;
+  const manAsset = `${artBasePath}/man-neutral.png`;
+  const womanAsset = `${artBasePath}/woman-${mood === 'good' ? 'good' : mood === 'bad' ? 'bad' : 'neutral'}.png`;
+  const [assetFailed, setAssetFailed] = useState(false);
+  const [loadedAssets, setLoadedAssets] = useState<Record<string, boolean>>({});
+  const generatedReady = !assetFailed && [backgroundAsset, manAsset, womanAsset].every((asset) => loadedAssets[asset]);
+
+  useEffect(() => {
+    setAssetFailed(false);
+  }, [womanAsset]);
+
+  const markAssetLoaded = (asset: string) => {
+    setLoadedAssets((current) => (current[asset] ? current : { ...current, [asset]: true }));
+  };
 
   return (
     <div className="relative h-[23rem] overflow-hidden bg-stone-950 sm:h-[31rem]">
-      <svg className="absolute inset-0 h-full w-full" viewBox="0 0 1000 520" preserveAspectRatio="xMidYMid slice" role="img" aria-label="夜の街で男女が会話しているシーン">
+      <svg className={`absolute inset-0 h-full w-full transition-opacity duration-500 ${generatedReady ? 'opacity-0' : 'opacity-100'}`} viewBox="0 0 1000 520" preserveAspectRatio="xMidYMid slice" role="img" aria-label="夜の街で男女が会話しているシーン">
         <defs>
           <linearGradient id="stage-sky" x1="0" x2="0" y1="0" y2="1">
             <stop offset="0" stopColor="#0b1020" />
@@ -353,6 +368,35 @@ function CharacterScene({ mood }: { mood: OutcomeMood | null }) {
         <rect x="0" y="0" width="1000" height="520" fill="#020617" opacity="0.12" />
         <path d="M0 0 H1000 V520 H0 Z" fill="none" stroke="#ffffff" strokeOpacity="0.12" strokeWidth="2" />
       </svg>
+      {!assetFailed && (
+        <div className={`absolute inset-0 z-10 overflow-hidden transition-opacity duration-700 ${generatedReady ? 'opacity-100' : 'pointer-events-none opacity-0'}`} aria-hidden="true">
+          <img
+            src={backgroundAsset}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+            onLoad={() => markAssetLoaded(backgroundAsset)}
+            onError={() => setAssetFailed(true)}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-stone-950/45 via-transparent to-stone-950/10" />
+          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-stone-950/65 to-transparent" />
+          <img
+            src={manAsset}
+            alt=""
+            className="absolute bottom-0 left-[4%] h-[86%] max-w-[42%] object-contain object-bottom drop-shadow-[0_24px_28px_rgba(0,0,0,0.45)] sm:left-[8%] sm:h-[88%]"
+            onLoad={() => markAssetLoaded(manAsset)}
+            onError={() => setAssetFailed(true)}
+          />
+          <img
+            src={womanAsset}
+            alt=""
+            className={`absolute bottom-0 h-[88%] max-w-[44%] object-contain object-bottom drop-shadow-[0_24px_28px_rgba(0,0,0,0.45)] sm:h-[90%] ${
+              mood === 'good' ? 'right-[8%]' : mood === 'bad' ? 'right-[3%]' : 'right-[6%]'
+            }`}
+            onLoad={() => markAssetLoaded(womanAsset)}
+            onError={() => setAssetFailed(true)}
+          />
+        </div>
+      )}
     </div>
   );
 }
