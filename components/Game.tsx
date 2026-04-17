@@ -206,51 +206,152 @@ const moodClass: Record<OutcomeMood, string> = {
 };
 
 function CharacterScene({ mood }: { mood: OutcomeMood | null }) {
-  const womanMouth = mood === 'good' ? 'M118 155 Q132 166 146 155' : mood === 'bad' ? 'M118 163 Q132 153 146 163' : 'M118 158 Q132 161 146 158';
-  const womanEye = mood === 'bad' ? '#2f2c29' : '#1f2933';
+  const sceneWash = mood === 'good' ? '#0f766e' : mood === 'bad' ? '#be123c' : '#4338ca';
+  const womanMouth = mood === 'good' ? 'M92 121 Q105 132 120 121' : mood === 'bad' ? 'M93 128 Q106 118 119 128' : 'M94 124 Q106 127 119 124';
+  const womanBrows = mood === 'bad'
+    ? ['M78 91 Q88 85 99 89', 'M113 89 Q125 84 136 91']
+    : mood === 'good'
+      ? ['M78 88 Q89 84 99 88', 'M113 88 Q124 84 136 88']
+      : ['M78 90 Q89 87 99 90', 'M113 90 Q124 87 136 90'];
+  const womanOffset = mood === 'bad' ? 'translate(632 66) rotate(3 105 140)' : mood === 'good' ? 'translate(604 66) rotate(-1 105 140)' : 'translate(618 66)';
+  const womanCoat = mood === 'bad' ? '#f7eef2' : mood === 'good' ? '#fff8eb' : '#f8f1e7';
+  const womanAccent = mood === 'good' ? '#0f766e' : mood === 'bad' ? '#be123c' : '#7c3aed';
 
   return (
-    <div className="relative h-64 overflow-hidden bg-stone-950 sm:h-80">
-      <img
-        src="/pua_memorial/shibuya-night.svg"
-        alt=""
-        className="absolute inset-0 h-full w-full object-cover opacity-95"
-        aria-hidden="true"
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-stone-950/70 via-transparent to-stone-950/10" />
-      <svg className="absolute bottom-0 left-1/2 h-64 w-[min(92%,34rem)] -translate-x-1/2" viewBox="0 0 520 260" role="img" aria-label="会話シーン">
-        <ellipse cx="170" cy="248" rx="82" ry="10" fill="#0f0d0b" opacity="0.35" />
-        <ellipse cx="376" cy="248" rx="82" ry="10" fill="#0f0d0b" opacity="0.35" />
+    <div className="relative h-[23rem] overflow-hidden bg-stone-950 sm:h-[31rem]">
+      <svg className="absolute inset-0 h-full w-full" viewBox="0 0 1000 520" preserveAspectRatio="xMidYMid slice" role="img" aria-label="夜の街で男女が会話しているシーン">
+        <defs>
+          <linearGradient id="stage-sky" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0" stopColor="#0b1020" />
+            <stop offset="0.52" stopColor="#172554" />
+            <stop offset="1" stopColor="#0f172a" />
+          </linearGradient>
+          <linearGradient id="stage-street" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0" stopColor="#273449" />
+            <stop offset="1" stopColor="#080a10" />
+          </linearGradient>
+          <linearGradient id="stage-glass" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0" stopColor="#67e8f9" stopOpacity="0.32" />
+            <stop offset="0.55" stopColor="#fef3c7" stopOpacity="0.16" />
+            <stop offset="1" stopColor="#fb7185" stopOpacity="0.25" />
+          </linearGradient>
+          <linearGradient id="male-jacket" x1="0" x2="1">
+            <stop offset="0" stopColor="#111827" />
+            <stop offset="1" stopColor="#374151" />
+          </linearGradient>
+          <filter id="stage-soft-glow" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="9" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          <filter id="stage-shadow" x="-30%" y="-30%" width="160%" height="170%">
+            <feDropShadow dx="0" dy="22" stdDeviation="18" floodColor="#020617" floodOpacity="0.45" />
+          </filter>
+        </defs>
 
-        <g transform="translate(40 0)" aria-hidden="true">
-          <path d="M72 245 C80 198 99 178 130 178 C162 178 181 198 188 245 Z" fill="#24201e" />
-          <path d="M94 245 L107 188 L130 207 L153 188 L166 245 Z" fill="#3b332f" />
-          <path d="M111 245 L120 199 L130 207 L140 199 L149 245 Z" fill="#e8e1d8" />
-          <path d="M118 185 L130 207 L142 185 Z" fill="#f1b99e" />
-          <path d="M88 95 C90 56 114 36 144 41 C174 47 188 73 180 113 C173 149 153 172 128 170 C102 168 86 137 88 95 Z" fill="#f0b99f" />
-          <path d="M84 105 C80 71 95 44 128 34 C163 24 187 52 188 87 C168 86 151 77 136 62 C125 78 108 95 84 105 Z" fill="#211d1b" />
-          <path d="M82 109 C73 101 70 116 78 130 C82 137 88 135 89 127" fill="#eaa98f" />
-          <path d="M181 109 C191 100 193 116 185 130 C181 137 175 135 174 127" fill="#eaa98f" />
-          <circle cx="112" cy="126" r="4" fill="#1f2933" />
-          <circle cx="151" cy="126" r="4" fill="#1f2933" />
-          <path d="M118 158 Q132 161 146 158" fill="none" stroke="#7a3f38" strokeWidth="4" strokeLinecap="round" />
-          <path d="M103 111 Q113 106 123 110" stroke="#211d1b" strokeWidth="4" strokeLinecap="round" />
-          <path d="M142 110 Q152 106 162 111" stroke="#211d1b" strokeWidth="4" strokeLinecap="round" />
+        <rect width="1000" height="520" fill="url(#stage-sky)" />
+        <rect width="1000" height="520" fill={sceneWash} opacity="0.12" />
+        <path d="M0 325 C140 286 242 303 360 270 C500 232 640 264 1000 212 L1000 520 L0 520 Z" fill="#111827" opacity="0.55" />
+
+        <g opacity="0.92">
+          <path d="M12 95 L126 65 L126 390 L12 420 Z" fill="#101827" />
+          <path d="M154 122 L292 78 L292 354 L154 394 Z" fill="#182235" />
+          <path d="M754 66 L928 118 L928 404 L754 350 Z" fill="#111827" />
+          <path d="M624 118 L736 92 L736 356 L624 388 Z" fill="#1f2937" />
+          <path d="M418 134 L530 106 L530 319 L418 348 Z" fill="#172033" opacity="0.8" />
         </g>
 
-        <g transform="translate(250 0)" aria-hidden="true">
-          <path d="M72 245 C78 198 98 178 130 178 C162 178 182 198 188 245 Z" fill="#2a2522" />
-          <path d="M82 245 C88 205 105 188 130 188 C155 188 172 205 178 245 Z" fill="#f3eee4" />
-          <path d="M88 96 C91 55 115 34 145 42 C176 51 189 79 181 117 C174 151 154 174 128 172 C101 170 85 139 88 96 Z" fill="#f4c7ae" />
-          <path d="M85 105 C78 63 101 33 133 29 C167 25 191 52 190 89 C170 86 148 76 132 57 C121 76 104 92 85 105 Z" fill="#2d2927" />
-          <path d="M81 108 C72 99 69 114 77 128 C81 136 87 134 89 127" fill="#f0b99f" />
-          <path d="M183 108 C193 99 195 114 187 128 C183 136 177 134 175 127" fill="#f0b99f" />
-          <circle cx="112" cy="126" r="4" fill={womanEye} />
-          <circle cx="151" cy="126" r="4" fill={womanEye} />
-          <path d={womanMouth} fill="none" stroke="#7a3f38" strokeWidth="4" strokeLinecap="round" />
-          <path d="M104 111 Q113 106 123 110" stroke="#2d2927" strokeWidth="4" strokeLinecap="round" />
-          <path d="M142 110 Q152 106 161 111" stroke="#2d2927" strokeWidth="4" strokeLinecap="round" />
+        <g filter="url(#stage-soft-glow)" opacity="0.95">
+          <rect x="46" y="126" width="52" height="16" rx="3" fill="#22d3ee" />
+          <rect x="178" y="156" width="82" height="22" rx="4" fill="#f59e0b" />
+          <rect x="645" y="144" width="64" height="18" rx="4" fill="#a78bfa" />
+          <rect x="786" y="146" width="94" height="24" rx="4" fill="#fb7185" />
+          <rect x="832" y="210" width="52" height="18" rx="3" fill="#2dd4bf" />
         </g>
+
+        <g opacity="0.52">
+          {Array.from({ length: 10 }).map((_, index) => (
+            <rect key={`left-window-${index}`} x={38 + (index % 2) * 44} y={176 + Math.floor(index / 2) * 38} width="24" height="18" rx="2" fill={index % 3 === 0 ? '#fde68a' : '#38bdf8'} opacity={index % 4 === 0 ? 0.35 : 0.72} />
+          ))}
+          {Array.from({ length: 12 }).map((_, index) => (
+            <rect key={`right-window-${index}`} x={782 + (index % 3) * 42} y={198 + Math.floor(index / 3) * 34} width="22" height="16" rx="2" fill={index % 2 === 0 ? '#f9a8d4' : '#93c5fd'} opacity={index % 5 === 0 ? 0.28 : 0.66} />
+          ))}
+        </g>
+
+        <path d="M0 342 L1000 294 L1000 520 L0 520 Z" fill="url(#stage-street)" />
+        <path d="M324 520 L470 315 L548 315 L706 520 Z" fill="#020617" opacity="0.34" />
+        <path d="M-40 504 C214 456 444 438 1050 414" stroke="#f8fafc" strokeOpacity="0.12" strokeWidth="22" />
+        <path d="M90 490 C320 442 620 418 1010 382" stroke="#14b8a6" strokeOpacity="0.22" strokeWidth="5" />
+        <path d="M0 434 C214 398 556 362 1000 337" stroke="#f59e0b" strokeOpacity="0.22" strokeWidth="4" />
+        <path d="M0 361 C250 332 540 312 1000 292" stroke="#f8fafc" strokeOpacity="0.12" strokeWidth="2" />
+
+        <g opacity="0.46">
+          <path d="M122 438 L212 431 L206 448 L108 456 Z" fill="#f8fafc" />
+          <path d="M242 428 L340 421 L342 438 L232 447 Z" fill="#f8fafc" />
+          <path d="M376 417 L486 411 L494 427 L368 436 Z" fill="#f8fafc" />
+          <path d="M528 407 L650 401 L664 416 L518 426 Z" fill="#f8fafc" />
+        </g>
+
+        <g opacity="0.72" filter="url(#stage-soft-glow)">
+          <path d="M0 330 C220 352 396 349 510 320 C640 287 804 275 1000 306 L1000 376 C786 338 625 352 510 382 C370 420 180 407 0 385 Z" fill="url(#stage-glass)" />
+        </g>
+
+        <g transform="translate(116 72)" filter="url(#stage-shadow)" aria-hidden="true">
+          <ellipse cx="146" cy="388" rx="132" ry="20" fill="#020617" opacity="0.38" />
+          <path d="M72 378 C74 298 101 248 144 244 C194 240 226 292 226 378 Z" fill="url(#male-jacket)" />
+          <path d="M94 378 L112 252 L144 292 L178 252 L204 378 Z" fill="#1f2937" />
+          <path d="M116 378 L127 272 L144 292 L161 272 L174 378 Z" fill="#f8fafc" />
+          <path d="M130 258 L144 292 L160 258 Z" fill="#c2410c" />
+          <path d="M92 290 C72 312 60 340 52 378 L82 378 C90 340 100 314 116 296 Z" fill="#111827" />
+          <path d="M210 294 C236 319 248 346 254 378 L224 378 C218 340 205 314 184 296 Z" fill="#111827" />
+          <path d="M101 74 C106 34 134 16 174 25 C210 33 232 66 222 116 C214 161 187 190 151 188 C114 186 96 132 101 74 Z" fill="#e9b18f" />
+          <path d="M96 89 C92 45 120 18 163 13 C206 8 238 41 238 82 C205 82 181 70 160 47 C144 70 124 84 96 89 Z" fill="#171312" />
+          <path d="M95 100 C78 94 78 123 94 139 C102 147 109 140 109 127" fill="#d99a7d" />
+          <path d="M221 100 C238 94 238 123 222 139 C214 147 207 140 207 127" fill="#d99a7d" />
+          <path d="M118 95 Q131 88 144 94" stroke="#171312" strokeWidth="6" strokeLinecap="round" />
+          <path d="M170 94 Q184 88 197 95" stroke="#171312" strokeWidth="6" strokeLinecap="round" />
+          <circle cx="132" cy="116" r="5" fill="#111827" />
+          <circle cx="183" cy="116" r="5" fill="#111827" />
+          <path d="M147 136 Q156 140 166 136" stroke="#b86b56" strokeWidth="4" strokeLinecap="round" fill="none" />
+          <path d="M137 158 Q156 168 178 158" stroke="#7f2d22" strokeWidth="5" strokeLinecap="round" fill="none" />
+          <path d="M83 278 L54 336 C48 348 55 362 70 362 C84 362 91 350 96 339 L118 288 Z" fill="#e9b18f" />
+          <path d="M232 328 L257 362 L279 347 L250 312 Z" fill="#e9b18f" />
+          <rect x="257" y="323" width="34" height="58" rx="7" fill="#020617" />
+          <rect x="263" y="329" width="22" height="42" rx="4" fill="#0ea5e9" opacity="0.72" />
+          <path d="M93 252 L201 252" stroke="#6b7280" strokeWidth="8" strokeLinecap="round" opacity="0.45" />
+        </g>
+
+        <g transform={womanOffset} filter="url(#stage-shadow)" aria-hidden="true">
+          <ellipse cx="130" cy="390" rx="138" ry="20" fill="#020617" opacity="0.36" />
+          <path d="M47 382 C54 292 82 240 130 238 C180 236 214 292 220 382 Z" fill={womanCoat} />
+          <path d="M72 382 C80 302 98 256 130 256 C164 256 184 302 193 382 Z" fill="#343036" />
+          <path d="M101 252 L130 286 L160 252 L148 382 L112 382 Z" fill="#fff7ed" />
+          <path d="M116 258 L130 286 L145 258 Z" fill={womanAccent} />
+          <path d="M75 286 C49 308 36 338 31 382 L62 382 C68 346 81 321 102 300 Z" fill={womanCoat} />
+          <path d="M187 288 C215 313 230 344 236 382 L205 382 C198 347 184 321 164 301 Z" fill={womanCoat} />
+          <path d="M74 74 C76 30 108 4 153 14 C197 25 220 64 209 119 C199 167 171 198 130 196 C89 194 70 132 74 74 Z" fill="#f2bf9f" />
+          <path d="M71 94 C58 39 94 -3 150 1 C207 5 229 58 218 109 C184 105 156 87 137 55 C124 78 102 93 71 94 Z" fill="#2a2321" />
+          <path d="M77 105 C58 98 58 130 77 145 C86 152 93 143 92 131" fill="#e9ad8e" />
+          <path d="M207 105 C226 98 226 130 207 145 C198 152 191 143 192 131" fill="#e9ad8e" />
+          <path d={womanBrows[0]} stroke="#2a2321" strokeWidth="5" strokeLinecap="round" fill="none" />
+          <path d={womanBrows[1]} stroke="#2a2321" strokeWidth="5" strokeLinecap="round" fill="none" />
+          <circle cx="89" cy="106" r="5" fill="#111827" />
+          <circle cx="125" cy="106" r="5" fill="#111827" />
+          <path d="M101 126 Q106 130 113 126" stroke="#b86b56" strokeWidth="4" strokeLinecap="round" fill="none" />
+          <path d={womanMouth} fill="none" stroke="#7a2f28" strokeWidth="5" strokeLinecap="round" />
+          <path d="M62 246 C42 282 37 324 48 366" stroke="#d9c8bc" strokeWidth="5" strokeLinecap="round" opacity="0.65" />
+          <path d="M184 249 C205 284 213 326 202 366" stroke="#d9c8bc" strokeWidth="5" strokeLinecap="round" opacity="0.65" />
+          <path d="M52 336 L75 365 L96 352 L72 321 Z" fill="#f2bf9f" />
+          <path d="M222 332 L244 361 L265 347 L239 317 Z" fill="#f2bf9f" />
+          <rect x="245" y="323" width="34" height="56" rx="7" fill="#111827" />
+          <rect x="251" y="329" width="22" height="40" rx="4" fill={womanAccent} opacity="0.68" />
+          <path d="M57 382 L206 382" stroke="#d6c8bd" strokeWidth="8" strokeLinecap="round" />
+        </g>
+
+        <rect x="0" y="0" width="1000" height="520" fill="#020617" opacity="0.12" />
+        <path d="M0 0 H1000 V520 H0 Z" fill="none" stroke="#ffffff" strokeOpacity="0.12" strokeWidth="2" />
       </svg>
     </div>
   );
