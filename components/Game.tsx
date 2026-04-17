@@ -533,7 +533,7 @@ export function Game() {
                 <div className="mt-5">
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <p className="text-xs font-bold text-stone-500">選択</p>
-                    <p className="text-sm font-medium text-stone-500">一番自然な返しを選ぶ</p>
+                    <p className="text-sm font-medium text-stone-500">次の返しを選ぶ</p>
                   </div>
                   <div className="grid gap-3">
                     {step.choices.map((choice, index) => (
