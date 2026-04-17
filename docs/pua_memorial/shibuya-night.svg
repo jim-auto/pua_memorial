@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-label="Shibuya night street">
+  <defs>
+    <linearGradient id="sky" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#19181d"/>
+      <stop offset="0.55" stop-color="#252025"/>
+      <stop offset="1" stop-color="#3c3028"/>
+    </linearGradient>
+    <linearGradient id="road" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#242321"/>
+      <stop offset="1" stop-color="#151514"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="960" height="540" fill="url(#sky)"/>
+  <polygon points="0,540 960,540 620,315 340,315" fill="url(#road)"/>
+  <polygon points="0,540 280,540 418,320 330,320" fill="#111113" opacity="0.75"/>
+  <polygon points="960,540 680,540 542,320 630,320" fill="#111113" opacity="0.75"/>
+
+  <rect x="34" y="74" width="170" height="290" rx="3" fill="#2f2b28"/>
+  <rect x="54" y="94" width="130" height="62" fill="#f24f7a" opacity="0.84" filter="url(#glow)"/>
+  <rect x="64" y="183" width="40" height="68" fill="#f6d96e" opacity="0.72"/>
+  <rect x="126" y="183" width="40" height="68" fill="#75d3d8" opacity="0.67"/>
+  <rect x="222" y="28" width="190" height="338" rx="4" fill="#222326"/>
+  <rect x="244" y="58" width="146" height="76" fill="#79d6d0" opacity="0.8" filter="url(#glow)"/>
+  <rect x="252" y="165" width="48" height="74" fill="#f7efc1" opacity="0.5"/>
+  <rect x="322" y="165" width="48" height="74" fill="#f7efc1" opacity="0.45"/>
+  <rect x="428" y="112" width="105" height="220" rx="3" fill="#303036"/>
+  <rect x="447" y="135" width="68" height="50" fill="#ffb65c" opacity="0.75" filter="url(#glow)"/>
+  <rect x="554" y="36" width="182" height="330" rx="4" fill="#28282c"/>
+  <rect x="579" y="70" width="132" height="60" fill="#f2675f" opacity="0.78" filter="url(#glow)"/>
+  <rect x="591" y="164" width="38" height="74" fill="#aee8de" opacity="0.54"/>
+  <rect x="652" y="164" width="38" height="74" fill="#f7efc1" opacity="0.48"/>
+  <rect x="760" y="86" width="166" height="278" rx="3" fill="#242423"/>
+  <rect x="785" y="112" width="112" height="62" fill="#8fb7ff" opacity="0.7" filter="url(#glow)"/>
+  <rect x="803" y="200" width="34" height="64" fill="#f7efc1" opacity="0.5"/>
+  <rect x="858" y="200" width="34" height="64" fill="#f7efc1" opacity="0.43"/>
+
+  <path d="M0 392 C140 350 210 344 340 360 C460 375 520 375 650 355 C790 333 865 350 960 380 L960 540 L0 540 Z" fill="#181716" opacity="0.95"/>
+  <path d="M280 540 L430 350" stroke="#f1eee6" stroke-width="5" opacity="0.22"/>
+  <path d="M680 540 L530 350" stroke="#f1eee6" stroke-width="5" opacity="0.22"/>
+  <path d="M388 412 L572 412" stroke="#f1eee6" stroke-width="6" opacity="0.22"/>
+  <path d="M344 478 L616 478" stroke="#f1eee6" stroke-width="7" opacity="0.24"/>
+
+  <g opacity="0.55">
+    <circle cx="260" cy="390" r="10" fill="#e9ddcb"/>
+    <rect x="253" y="400" width="14" height="42" rx="7" fill="#1d1b1a"/>
+    <circle cx="710" cy="384" r="9" fill="#e9ddcb"/>
+    <rect x="704" y="393" width="12" height="39" rx="6" fill="#1d1b1a"/>
+    <circle cx="165" cy="405" r="8" fill="#e9ddcb"/>
+    <rect x="160" y="413" width="10" height="34" rx="5" fill="#1d1b1a"/>
+    <circle cx="815" cy="410" r="8" fill="#e9ddcb"/>
+    <rect x="810" y="418" width="10" height="34" rx="5" fill="#1d1b1a"/>
+  </g>
+</svg>
