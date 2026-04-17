@@ -206,8 +206,8 @@ const moodClass: Record<OutcomeMood, string> = {
 };
 
 function CharacterScene({ mood }: { mood: OutcomeMood | null }) {
-  const mouth = mood === 'good' ? 'M118 155 Q132 166 146 155' : mood === 'bad' ? 'M118 163 Q132 153 146 163' : 'M118 158 Q132 161 146 158';
-  const eye = mood === 'bad' ? '#2f2c29' : '#1f2933';
+  const womanMouth = mood === 'good' ? 'M118 155 Q132 166 146 155' : mood === 'bad' ? 'M118 163 Q132 153 146 163' : 'M118 158 Q132 161 146 158';
+  const womanEye = mood === 'bad' ? '#2f2c29' : '#1f2933';
 
   return (
     <div className="relative h-72 overflow-hidden rounded-md border border-white/40 bg-stone-950 shadow-soft">
@@ -218,18 +218,39 @@ function CharacterScene({ mood }: { mood: OutcomeMood | null }) {
         aria-hidden="true"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-stone-950/70 via-transparent to-stone-950/10" />
-      <svg className="absolute bottom-0 left-1/2 h-64 w-64 -translate-x-1/2" viewBox="0 0 260 260" role="img" aria-label="会話相手">
-        <path d="M72 245 C78 198 98 178 130 178 C162 178 182 198 188 245 Z" fill="#2a2522" />
-        <path d="M82 245 C88 205 105 188 130 188 C155 188 172 205 178 245 Z" fill="#f3eee4" />
-        <path d="M88 96 C91 55 115 34 145 42 C176 51 189 79 181 117 C174 151 154 174 128 172 C101 170 85 139 88 96 Z" fill="#f4c7ae" />
-        <path d="M85 105 C78 63 101 33 133 29 C167 25 191 52 190 89 C170 86 148 76 132 57 C121 76 104 92 85 105 Z" fill="#2d2927" />
-        <path d="M81 108 C72 99 69 114 77 128 C81 136 87 134 89 127" fill="#f0b99f" />
-        <path d="M183 108 C193 99 195 114 187 128 C183 136 177 134 175 127" fill="#f0b99f" />
-        <circle cx="112" cy="126" r="4" fill={eye} />
-        <circle cx="151" cy="126" r="4" fill={eye} />
-        <path d={mouth} fill="none" stroke="#7a3f38" strokeWidth="4" strokeLinecap="round" />
-        <path d="M104 111 Q113 106 123 110" stroke="#2d2927" strokeWidth="4" strokeLinecap="round" />
-        <path d="M142 110 Q152 106 161 111" stroke="#2d2927" strokeWidth="4" strokeLinecap="round" />
+      <svg className="absolute bottom-0 left-1/2 h-64 w-[min(92%,34rem)] -translate-x-1/2" viewBox="0 0 520 260" role="img" aria-label="会話シーン">
+        <ellipse cx="170" cy="248" rx="82" ry="10" fill="#0f0d0b" opacity="0.35" />
+        <ellipse cx="376" cy="248" rx="82" ry="10" fill="#0f0d0b" opacity="0.35" />
+
+        <g transform="translate(40 0)" aria-hidden="true">
+          <path d="M72 245 C80 198 99 178 130 178 C162 178 181 198 188 245 Z" fill="#24201e" />
+          <path d="M94 245 L107 188 L130 207 L153 188 L166 245 Z" fill="#3b332f" />
+          <path d="M111 245 L120 199 L130 207 L140 199 L149 245 Z" fill="#e8e1d8" />
+          <path d="M118 185 L130 207 L142 185 Z" fill="#f1b99e" />
+          <path d="M88 95 C90 56 114 36 144 41 C174 47 188 73 180 113 C173 149 153 172 128 170 C102 168 86 137 88 95 Z" fill="#f0b99f" />
+          <path d="M84 105 C80 71 95 44 128 34 C163 24 187 52 188 87 C168 86 151 77 136 62 C125 78 108 95 84 105 Z" fill="#211d1b" />
+          <path d="M82 109 C73 101 70 116 78 130 C82 137 88 135 89 127" fill="#eaa98f" />
+          <path d="M181 109 C191 100 193 116 185 130 C181 137 175 135 174 127" fill="#eaa98f" />
+          <circle cx="112" cy="126" r="4" fill="#1f2933" />
+          <circle cx="151" cy="126" r="4" fill="#1f2933" />
+          <path d="M118 158 Q132 161 146 158" fill="none" stroke="#7a3f38" strokeWidth="4" strokeLinecap="round" />
+          <path d="M103 111 Q113 106 123 110" stroke="#211d1b" strokeWidth="4" strokeLinecap="round" />
+          <path d="M142 110 Q152 106 162 111" stroke="#211d1b" strokeWidth="4" strokeLinecap="round" />
+        </g>
+
+        <g transform="translate(250 0)" aria-hidden="true">
+          <path d="M72 245 C78 198 98 178 130 178 C162 178 182 198 188 245 Z" fill="#2a2522" />
+          <path d="M82 245 C88 205 105 188 130 188 C155 188 172 205 178 245 Z" fill="#f3eee4" />
+          <path d="M88 96 C91 55 115 34 145 42 C176 51 189 79 181 117 C174 151 154 174 128 172 C101 170 85 139 88 96 Z" fill="#f4c7ae" />
+          <path d="M85 105 C78 63 101 33 133 29 C167 25 191 52 190 89 C170 86 148 76 132 57 C121 76 104 92 85 105 Z" fill="#2d2927" />
+          <path d="M81 108 C72 99 69 114 77 128 C81 136 87 134 89 127" fill="#f0b99f" />
+          <path d="M183 108 C193 99 195 114 187 128 C183 136 177 134 175 127" fill="#f0b99f" />
+          <circle cx="112" cy="126" r="4" fill={womanEye} />
+          <circle cx="151" cy="126" r="4" fill={womanEye} />
+          <path d={womanMouth} fill="none" stroke="#7a3f38" strokeWidth="4" strokeLinecap="round" />
+          <path d="M104 111 Q113 106 123 110" stroke="#2d2927" strokeWidth="4" strokeLinecap="round" />
+          <path d="M142 110 Q152 106 161 111" stroke="#2d2927" strokeWidth="4" strokeLinecap="round" />
+        </g>
       </svg>
     </div>
   );
