@@ -210,7 +210,7 @@ function CharacterScene({ mood }: { mood: OutcomeMood | null }) {
   const womanEye = mood === 'bad' ? '#2f2c29' : '#1f2933';
 
   return (
-    <div className="relative h-72 overflow-hidden rounded-md border border-white/40 bg-stone-950 shadow-soft">
+    <div className="relative h-64 overflow-hidden bg-stone-950 sm:h-80">
       <img
         src="/pua_memorial/shibuya-night.svg"
         alt=""
@@ -262,6 +262,7 @@ export function Game() {
   const hints = useMemo(() => getHints(snapshot), [snapshot]);
   const mentalLabel = getStatLabel(snapshot.player.mental, ['低い', '保っている', '安定']);
   const observationLabel = getStatLabel(snapshot.player.observation, ['鈍い', '普通', '冴えている']);
+  const progress = snapshot.ending ? 100 : ((snapshot.stepIndex + 1) / scenario.length) * 100;
 
   useEffect(() => {
     setSnapshot(createInitialSnapshot());
@@ -323,96 +324,130 @@ export function Game() {
   };
 
   return (
-    <main className="min-h-screen bg-[#f5f2ec] px-4 py-4 text-stone-950 sm:px-6 lg:px-8">
-      <div className="mx-auto flex max-w-7xl flex-col gap-4">
-        <header className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-stone-300 bg-white/85 px-4 py-3 shadow-sm">
-          <div>
-            <p className="text-xs font-semibold text-stone-500">pua_memorial</p>
-            <h1 className="text-xl font-semibold sm:text-2xl">{snapshot.ending ? snapshot.ending.title : step.place}</h1>
+    <main className="min-h-screen bg-[#f7f8f4] px-4 py-5 text-stone-950 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-7xl flex-col gap-5">
+        <header className="rounded-md border border-stone-200 bg-white px-4 py-4 shadow-sm sm:px-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-xs font-bold text-teal-700">pua_memorial</p>
+              <h1 className="mt-1 text-2xl font-bold leading-tight text-stone-950 sm:text-3xl">{snapshot.ending ? snapshot.ending.title : step.place}</h1>
+              <p className="mt-2 text-sm leading-6 text-stone-600">{snapshot.ending ? snapshot.ending.tone : `${step.phaseLabel} / Turn ${snapshot.stepIndex + 1} of ${scenario.length}`}</p>
+            </div>
+            <div className="grid gap-2 text-sm sm:grid-cols-2 lg:w-[25rem]">
+              <div className="rounded-md border border-stone-200 bg-stone-50 px-3 py-2">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-semibold text-stone-600">メンタル</span>
+                  <span className="font-bold text-stone-950">{mentalLabel}</span>
+                </div>
+                <div className="mt-2 h-2 rounded-full bg-stone-200">
+                  <div className="h-2 rounded-full bg-teal-700" style={{ width: `${(snapshot.player.mental / 8) * 100}%` }} />
+                </div>
+              </div>
+              <div className="rounded-md border border-stone-200 bg-stone-50 px-3 py-2">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-semibold text-stone-600">観察力</span>
+                  <span className="font-bold text-stone-950">{observationLabel}</span>
+                </div>
+                <div className="mt-2 h-2 rounded-full bg-stone-200">
+                  <div className="h-2 rounded-full bg-indigo-700" style={{ width: `${(snapshot.player.observation / 8) * 100}%` }} />
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2 text-sm">
-            <span className="rounded-full border border-stone-300 bg-stone-50 px-3 py-1">メンタル: {mentalLabel}</span>
-            <span className="rounded-full border border-stone-300 bg-stone-50 px-3 py-1">観察力: {observationLabel}</span>
+          <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-stone-200">
+            <div className="h-full rounded-full bg-stone-950 transition-all duration-300" style={{ width: `${progress}%` }} />
           </div>
         </header>
 
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <section className="rounded-md border border-stone-300 bg-white p-4 shadow-soft">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <span className="rounded-full bg-stone-900 px-3 py-1 text-sm text-white">{snapshot.ending ? 'エンディング' : step.phaseLabel}</span>
-              <span className="text-sm text-stone-500">{snapshot.ending ? snapshot.ending.tone : `Turn ${snapshot.stepIndex + 1} / ${scenario.length}`}</span>
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <section className="overflow-hidden rounded-md border border-stone-200 bg-white shadow-[0_18px_48px_rgba(28,25,23,0.10)]">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-200 px-4 py-3 sm:px-5">
+              <span className="rounded-full bg-stone-950 px-3 py-1 text-sm font-semibold text-white">{snapshot.ending ? 'エンディング' : step.phaseLabel}</span>
+              <span className="text-sm font-medium text-stone-500">{snapshot.ending ? '結果' : '会話中'}</span>
             </div>
 
             <CharacterScene mood={snapshot.lastMood} />
 
-            <div className="mt-4 grid gap-3 md:grid-cols-[1fr_1.2fr]">
-              <div className="rounded-md border border-stone-200 bg-stone-50 p-4">
-                <p className="text-sm leading-7 text-stone-700">{snapshot.ending ? snapshot.ending.body : step.narration}</p>
-              </div>
-              <div className="rounded-md border border-stone-200 bg-white p-4">
-                <p className="text-sm font-semibold text-stone-500">相手</p>
-                <p className="mt-2 text-lg leading-8">{snapshot.ending ? snapshot.lastReply : step.npcLine}</p>
-              </div>
-            </div>
-
-            {!snapshot.ending ? (
-              <div className="mt-4">
-                <p className="mb-2 text-sm font-semibold text-stone-500">選択</p>
-                <div className="grid gap-3">
-                  {step.choices.map((choice) => (
-                    <button
-                      key={choice.id}
-                      type="button"
-                      onClick={() => choose(choice)}
-                      className="group min-h-20 rounded-md border border-stone-300 bg-white px-4 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-stone-900 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
-                    >
-                      <span className="block text-base font-semibold leading-7 text-stone-950">{getChoiceText(choice, snapshot.player.mental)}</span>
-                      <span className="mt-1 block text-sm leading-6 text-stone-500">{choice.intent}</span>
-                    </button>
-                  ))}
+            <div className="px-4 py-5 sm:px-5">
+              <div className="grid gap-5 border-b border-stone-200 pb-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.2fr)]">
+                <div>
+                  <p className="text-xs font-bold text-stone-500">場面</p>
+                  <p className="mt-2 text-base leading-8 text-stone-700">{snapshot.ending ? snapshot.ending.body : step.narration}</p>
+                </div>
+                <div className="border-l-4 border-teal-700 bg-teal-50 px-4 py-3">
+                  <p className="text-xs font-bold text-teal-800">相手の言葉</p>
+                  <p className="mt-2 text-xl font-semibold leading-9 text-stone-950">{snapshot.ending ? snapshot.lastReply : step.npcLine}</p>
                 </div>
               </div>
-            ) : (
-              <div className="mt-4 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={restart}
-                  className="rounded-md bg-stone-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
-                >
-                  もう一度遊ぶ
-                </button>
-              </div>
-            )}
+
+              {!snapshot.ending ? (
+                <div className="mt-5">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-xs font-bold text-stone-500">選択</p>
+                    <p className="text-sm font-medium text-stone-500">一番自然な返しを選ぶ</p>
+                  </div>
+                  <div className="grid gap-3">
+                    {step.choices.map((choice, index) => (
+                      <button
+                        key={choice.id}
+                        type="button"
+                        onClick={() => choose(choice)}
+                        className="group grid min-h-[6.5rem] grid-cols-[2.75rem_1fr] items-start gap-3 rounded-md border-2 border-stone-200 bg-[#fcfcfb] p-4 text-left transition hover:-translate-y-0.5 hover:border-teal-700 hover:bg-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-teal-700 focus:ring-offset-2"
+                        aria-label={`選択肢 ${index + 1}`}
+                      >
+                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-stone-950 text-base font-bold text-white transition group-hover:bg-teal-700">
+                          {index + 1}
+                        </span>
+                        <span>
+                          <span className="block text-lg font-bold leading-8 text-stone-950">{getChoiceText(choice, snapshot.player.mental)}</span>
+                          <span className="mt-2 block border-l-2 border-stone-300 pl-3 text-sm leading-6 text-stone-600">{choice.intent}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={restart}
+                    className="rounded-md bg-stone-950 px-5 py-3 text-base font-bold text-white transition hover:bg-teal-800 focus:outline-none focus:ring-2 focus:ring-teal-700 focus:ring-offset-2"
+                  >
+                    もう一度遊ぶ
+                  </button>
+                </div>
+              )}
+            </div>
           </section>
 
-          <aside className="flex flex-col gap-4">
-            <section className="rounded-md border border-stone-300 bg-white p-4 shadow-sm">
-              <h2 className="text-sm font-semibold text-stone-500">曖昧なヒント</h2>
-              <div className="mt-3 grid gap-2">
+          <aside className="grid content-start gap-4 xl:sticky xl:top-5">
+            <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
+              <h2 className="text-base font-bold text-stone-950">曖昧なヒント</h2>
+              <div className="mt-3 grid gap-3">
                 {hints.map((hint) => (
-                  <p key={hint} className="rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-sm leading-6 text-stone-700">
+                  <p key={hint} className="border-l-4 border-indigo-600 bg-indigo-50 px-3 py-2 text-sm leading-6 text-stone-700">
                     {hint}
                   </p>
                 ))}
               </div>
             </section>
 
-            <section className="rounded-md border border-stone-300 bg-white p-4 shadow-sm">
-              <h2 className="text-sm font-semibold text-stone-500">直前の反応</h2>
-              <p className={`mt-3 rounded-md border px-3 py-3 text-sm leading-6 ${snapshot.lastMood ? moodClass[snapshot.lastMood] : 'border-stone-200 bg-stone-50 text-stone-700'}`}>
+            <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
+              <h2 className="text-base font-bold text-stone-950">直前の反応</h2>
+              <p className={`mt-3 rounded-md border px-3 py-3 text-sm leading-7 ${snapshot.lastMood ? moodClass[snapshot.lastMood] : 'border-stone-200 bg-stone-50 text-stone-700'}`}>
                 {snapshot.lastReply}
               </p>
             </section>
 
-            <section className="rounded-md border border-stone-300 bg-white p-4 shadow-sm">
-              <h2 className="text-sm font-semibold text-stone-500">流れ</h2>
-              <ol className="mt-3 space-y-3">
+            <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
+              <h2 className="text-base font-bold text-stone-950">流れ</h2>
+              <ol className="mt-3 max-h-[22rem] space-y-3 overflow-auto pr-1">
                 {snapshot.logs.length === 0 ? (
                   <li className="text-sm leading-6 text-stone-500">まだ会話は始まっていない。</li>
                 ) : (
                   snapshot.logs.map((log, index) => (
-                    <li key={`${log.phase}-${index}`} className="border-l-2 border-stone-300 pl-3">
-                      <p className="text-xs font-semibold text-stone-500">{log.phase}</p>
+                    <li key={`${log.phase}-${index}`} className="border-l-4 border-stone-300 pl-3">
+                      <p className="text-xs font-bold text-stone-500">{log.phase}</p>
                       <p className="mt-1 text-sm leading-6 text-stone-800">{log.choiceText}</p>
                     </li>
                   ))
