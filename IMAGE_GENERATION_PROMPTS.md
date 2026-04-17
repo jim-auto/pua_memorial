@@ -7,6 +7,9 @@ API keyなしで、ChatGPT Images / Scenario / PixelLab などにそのまま投
 生成した画像は以下の名前で保存してください。アプリ側はこの名前を自動で読みにいきます。
 
 ```text
+public/assets/visual-novel/scene-neutral.png
+public/assets/visual-novel/scene-good.png
+public/assets/visual-novel/scene-bad.png
 public/assets/visual-novel/bg-shibuya-night.png
 public/assets/visual-novel/man-neutral.png
 public/assets/visual-novel/woman-neutral.png
@@ -17,9 +20,22 @@ public/assets/visual-novel/woman-bad.png
 推奨サイズ:
 
 ```text
+Complete scenes: 1280x720 or 1920x1080 PNG
 Background: 1920x1080 PNG
 Characters: 1400x2200 PNG, transparent background
 ```
+
+## Fast Path: Complete Scene Images
+
+APIキーなしで今すぐ反映したい場合は、まずこの3枚だけ作ればOKです。
+
+```text
+scene-neutral.png
+scene-good.png
+scene-bad.png
+```
+
+このrepoでは `npm run generate:art` で Pollinations の no-key 画像生成エンドポイントからこの3枚を作ります。
 
 ## Shared Style
 
