@@ -41,12 +41,15 @@ export type ScenarioStep = {
 
 export type TargetRisk = 'powerRisk' | 'troubleRisk' | 'moneyRisk';
 
-export type TargetProfileId = 'office' | 'friendly' | 'guarded' | 'hurried' | 'kabukicho' | 'trouble';
+export type SceneVisualKey = 'shibuya' | 'kabukicho' | 'ikebukuro' | 'club';
+
+export type TargetProfileId = 'office' | 'friendly' | 'guarded' | 'hurried' | 'kabukicho' | 'ikebukuro' | 'club' | 'trouble';
 
 export type TargetProfile = {
   id: TargetProfileId;
   label: string;
   area: string;
+  visualKey: SceneVisualKey;
   summary: string;
   modifier: GameEffect;
   risks?: TargetRisk[];
@@ -77,6 +80,7 @@ export const targetProfiles: TargetProfile[] = [
     id: 'office',
     label: 'しごおわ普通',
     area: '渋谷スクランブル',
+    visualKey: 'shibuya',
     summary: '反応は読みやすい。雑に押すと普通に冷める。',
     modifier: {},
   },
@@ -84,6 +88,7 @@ export const targetProfiles: TargetProfile[] = [
     id: 'friendly',
     label: 'ノリ良い友達待ち',
     area: 'センター街入口',
+    visualKey: 'shibuya',
     summary: '笑いは拾うが、待ち合わせ前で時間は短い。',
     modifier: { caution: -1, interest: 1, vibe: 2, timePressure: 1 },
   },
@@ -91,6 +96,7 @@ export const targetProfiles: TargetProfile[] = [
     id: 'guarded',
     label: '警戒強めソロ',
     area: '神南の横断歩道',
+    visualKey: 'shibuya',
     summary: '引き際を見せないとすぐ固まる。圧に弱い。',
     modifier: { caution: 2, vibe: -1, observation: 1 },
     risks: ['powerRisk'],
@@ -99,6 +105,7 @@ export const targetProfiles: TargetProfile[] = [
     id: 'hurried',
     label: '終電前しごおわ',
     area: '井の頭通り',
+    visualKey: 'shibuya',
     summary: '時間圧が強い。短く刺せないと終わる。',
     modifier: { caution: 1, timePressure: 2, mental: -1 },
   },
@@ -106,14 +113,33 @@ export const targetProfiles: TargetProfile[] = [
     id: 'kabukicho',
     label: '歌舞伎町の女',
     area: '歌舞伎町入口',
+    visualKey: 'kabukicho',
     summary: 'ノリは強いが、金の話に寄せると別ゲームになる。',
     modifier: { interest: 2, vibe: 1, caution: 1, timePressure: 1 },
     risks: ['moneyRisk', 'troubleRisk'],
   },
   {
+    id: 'ikebukuro',
+    label: '池袋の女',
+    area: '池袋西口',
+    visualKey: 'ikebukuro',
+    summary: '落ち着いて見えるが、雑な打診には反応が薄い。',
+    modifier: { interest: 1, timePressure: 1, observation: 1 },
+  },
+  {
+    id: 'club',
+    label: 'クラブ帰り',
+    area: 'クラブ前',
+    visualKey: 'club',
+    summary: 'テンションは高いが、音と仲間の流れで判断がブレやすい。',
+    modifier: { caution: 1, interest: 1, vibe: 2, timePressure: 1, mental: -1 },
+    risks: ['powerRisk'],
+  },
+  {
     id: 'trouble',
     label: '怪しい女',
     area: '道玄坂の路地前',
+    visualKey: 'shibuya',
     summary: '乗っているように見えるが、条件確認を飛ばすと事故る。',
     modifier: { caution: -1, interest: 2, vibe: 1, timePressure: 1 },
     risks: ['troubleRisk'],
@@ -144,14 +170,14 @@ export const scenario: ScenarioStep[] = [
       },
       {
         id: 'honest',
-        text: 'ごめん一個だけ。今の歩き方、渋谷慣れてる人っぽかった。駅こっちで合ってます？',
+        text: 'ごめん一個だけ。今の歩き方、この辺慣れてる人っぽかった。駅こっちで合ってます？',
         lowMentalText: 'すみません一個だけ。駅こっちで合ってます？',
         intent: '軽い観察から入って、道聞きに逃がせる形にする。',
         tone: 'curious',
         effect: { caution: -1, interest: 1, vibe: 1, mental: 1 },
         lowMentalEffect: { caution: 1, vibe: -1 },
         replies: {
-          good: '「渋谷慣れてる人って何ですか」少し笑って、指で方向を示す。',
+          good: '「この辺慣れてる人って何ですか」少し笑って、指で方向を示す。',
           mixed: '「たぶんそっちです」距離は保ったまま答えてくれる。',
           bad: '「わからないです」会話を広げる空気ではない。',
         },
@@ -180,7 +206,7 @@ export const scenario: ScenarioStep[] = [
     choices: [
       {
         id: 'mirror-question',
-        text: 'たまにです。てか今からどっち方面です？センター街抜ける感じ？',
+        text: 'たまにです。てか今からどっち方面です？駅側抜ける感じ？',
         lowMentalText: 'たまにです。今からどっち方面ですか？',
         intent: '予定と導線を自然に聞いて、次の打診材料を探る。',
         tone: 'curious',

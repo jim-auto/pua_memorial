@@ -10,6 +10,7 @@ import {
   type HiddenState,
   type OutcomeMood,
   type PlayerState,
+  type SceneVisualKey,
   type TargetProfile,
   type TargetRisk,
 } from '@/data/scenario';
@@ -289,7 +290,7 @@ const moodClass: Record<OutcomeMood, string> = {
   bad: 'border-rose-300 bg-rose-50 text-rose-950',
 };
 
-function CharacterScene({ mood }: { mood: OutcomeMood | null }) {
+function CharacterScene({ mood, visualKey, area }: { mood: OutcomeMood | null; visualKey: SceneVisualKey; area: string }) {
   const sceneWash = mood === 'good' ? '#0f766e' : mood === 'bad' ? '#be123c' : '#4338ca';
   const womanMouth = mood === 'good' ? 'M92 121 Q105 132 120 121' : mood === 'bad' ? 'M93 128 Q106 118 119 128' : 'M94 124 Q106 127 119 124';
   const womanBrows = mood === 'bad'
@@ -302,7 +303,7 @@ function CharacterScene({ mood }: { mood: OutcomeMood | null }) {
   const womanAccent = mood === 'good' ? '#0f766e' : mood === 'bad' ? '#be123c' : '#7c3aed';
   const artBasePath = '/pua_memorial/assets/visual-novel';
   const moodName = mood === 'good' ? 'good' : mood === 'bad' ? 'bad' : 'neutral';
-  const sceneAsset = `${artBasePath}/scene-${moodName}.png`;
+  const sceneAsset = `${artBasePath}/scene-${visualKey}-${moodName}.png`;
   const backgroundAsset = `${artBasePath}/bg-shibuya-night.png`;
   const manAsset = `${artBasePath}/man-neutral.png`;
   const womanAsset = `${artBasePath}/woman-${moodName}.png`;
@@ -316,7 +317,7 @@ function CharacterScene({ mood }: { mood: OutcomeMood | null }) {
 
   return (
     <div className="relative h-[23rem] overflow-hidden bg-stone-950 sm:h-[31rem]">
-      <svg className="absolute inset-0 h-full w-full" viewBox="0 0 1000 520" preserveAspectRatio="xMidYMid slice" role="img" aria-label="夜の街で男女が会話しているシーン">
+      <svg className="absolute inset-0 h-full w-full" viewBox="0 0 1000 520" preserveAspectRatio="xMidYMid slice" role="img" aria-label={`${area}で男女が会話しているシーン`}>
         <defs>
           <linearGradient id="stage-sky" x1="0" x2="0" y1="0" y2="1">
             <stop offset="0" stopColor="#0b1020" />
@@ -496,7 +497,7 @@ export function Game() {
   const mentalLabel = getStatLabel(snapshot.player.mental, ['低い', '保っている', '安定']);
   const observationLabel = getStatLabel(snapshot.player.observation, ['鈍い', '普通', '冴えている']);
   const progress = snapshot.ending ? 100 : ((snapshot.stepIndex + 1) / scenario.length) * 100;
-  const currentPlace = snapshot.target.area === step.place ? step.place : `${snapshot.target.area} / ${step.place}`;
+  const currentPlace = snapshot.target.area;
 
   useEffect(() => {
     setSnapshot(createInitialSnapshot());
@@ -604,7 +605,7 @@ export function Game() {
               <span className="text-sm font-medium text-stone-500">{snapshot.ending ? '結果' : '会話中'}</span>
             </div>
 
-            <CharacterScene mood={snapshot.lastMood} />
+            <CharacterScene mood={snapshot.lastMood} visualKey={snapshot.target.visualKey} area={snapshot.target.area} />
 
             <div className="px-4 py-5 sm:px-5">
               <div className="grid gap-5 border-b border-stone-200 pb-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.2fr)]">
