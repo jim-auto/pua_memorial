@@ -22,9 +22,12 @@ type TurnLog = {
   mood: OutcomeMood;
 };
 
+type HotelRoute = 'drink' | 'konbini' | 'direct' | null;
+
 type GameSnapshot = {
   stepIndex: number;
   target: TargetProfile;
+  hotelRoute: HotelRoute;
   player: PlayerState;
   hidden: HiddenState;
   lastReply: string;
@@ -37,6 +40,37 @@ const clamp = (value: number, min = 0, max = 8) => Math.max(min, Math.min(max, v
 const randomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
 
 const hasRisk = (target: TargetProfile, risk: TargetRisk) => target.risks?.includes(risk) ?? false;
+const getHotelRoute = (choiceId: string): HotelRoute => {
+  if (choiceId === 'soft-home') return 'drink';
+  if (choiceId === 'konbini-hotel') return 'konbini';
+  if (choiceId === 'hard-home') return 'direct';
+  return null;
+};
+
+const resolveChoiceForScene = (choice: Choice, visualKey: SceneVisualKey): Choice => {
+  const copy = choice.sceneCopies?.[visualKey];
+
+  if (!copy) return choice;
+
+  return {
+    ...choice,
+    ...copy,
+    replies: {
+      ...choice.replies,
+      ...(copy.replies ?? {}),
+    },
+  };
+};
+
+const resolveStepForScene = (step: (typeof scenario)[number], visualKey: SceneVisualKey) => {
+  const copy = step.sceneCopies?.[visualKey];
+
+  return {
+    ...step,
+    ...copy,
+    choices: step.choices.map((choice) => resolveChoiceForScene(choice, visualKey)),
+  };
+};
 
 const createInitialSnapshot = (randomized = true): GameSnapshot => {
   const target = randomized ? targetProfiles[randomInt(0, targetProfiles.length - 1)] : targetProfiles[0];
@@ -45,6 +79,7 @@ const createInitialSnapshot = (randomized = true): GameSnapshot => {
   return {
     stepIndex: 0,
     target,
+    hotelRoute: null,
     player: {
       mental: clamp((randomized ? randomInt(4, 6) : 5) + (modifier.mental ?? 0)),
       observation: clamp((randomized ? randomInt(3, 5) : 4) + (modifier.observation ?? 0)),
@@ -177,6 +212,25 @@ const applyChoice = (snapshot: GameSnapshot, choice: Choice) => {
   return { hidden, player, mood, reply };
 };
 
+const decideHotelRouteBlock = (hidden: HiddenState, player: PlayerState, choice: Choice, mood: OutcomeMood, target: TargetProfile): Ending | null => {
+  const forcedBad = choice.mine || hidden.caution >= 7 || mood === 'bad';
+  const riskyHotel = choice.id === 'konbini-hotel' || choice.id === 'hard-home';
+
+  if (hasRisk(target, 'troubleRisk') && riskyHotel && (mood !== 'good' || hidden.caution >= 3 || hidden.timePressure >= 4 || player.observation <= 3)) {
+    return endings.legalTrouble;
+  }
+
+  if (forcedBad) {
+    return choice.tone === 'pushy' ? endings.powerBad : endings.fail;
+  }
+
+  if (choice.id === 'hard-home' && (hasRisk(target, 'powerRisk') || hidden.caution >= 4 || player.mental <= 2)) {
+    return endings.powerBad;
+  }
+
+  return null;
+};
+
 const decideEnding = (hidden: HiddenState, player: PlayerState, choice: Choice, mood: OutcomeMood, target: TargetProfile): Ending => {
   const warmth = hidden.interest + hidden.vibe - hidden.caution - Math.floor(hidden.timePressure / 2);
   const canStayLonger = hidden.interest >= 5 && hidden.vibe >= 4 && hidden.caution <= 3 && hidden.timePressure <= 5;
@@ -232,6 +286,44 @@ const decideEnding = (hidden: HiddenState, player: PlayerState, choice: Choice, 
   }
 
   return warmth >= 4 && Math.random() < 0.15 ? endings.contact : endings.fail;
+};
+
+const decideHotelEnding = (hotelRoute: HotelRoute, hidden: HiddenState, player: PlayerState, choice: Choice, mood: OutcomeMood, target: TargetProfile): Ending => {
+  const warmth = hidden.interest + hidden.vibe - hidden.caution - Math.floor(hidden.timePressure / 2);
+  const canProceed = hidden.interest >= 4 && hidden.vibe >= 3 && hidden.caution <= 4 && player.mental >= 2;
+
+  if (choice.id === 'hotel-final-next-day') {
+    return warmth >= 1 ? endings.nextDay : endings.contact;
+  }
+
+  if (choice.id === 'hotel-final-push') {
+    if (hasRisk(target, 'troubleRisk') || hasRisk(target, 'moneyRisk') || hidden.caution >= 3 || player.observation <= 3) {
+      return endings.legalTrouble;
+    }
+    return endings.powerBad;
+  }
+
+  if (choice.mine || hidden.caution >= 7 || mood === 'bad') {
+    return choice.tone === 'pushy' ? endings.powerBad : warmth >= 1 ? endings.nextDay : endings.fail;
+  }
+
+  if (!canProceed) {
+    return warmth >= 1 ? endings.nextDay : endings.fail;
+  }
+
+  if (hasRisk(target, 'troubleRisk') && hidden.caution >= 3 && choice.id !== 'hotel-final-next-day') {
+    return endings.legalTrouble;
+  }
+
+  if (choice.id === 'hotel-final-supplies' || hotelRoute === 'konbini') {
+    return endings.hotelKonbini;
+  }
+
+  if (hotelRoute === 'direct') {
+    return endings.hotelDirect;
+  }
+
+  return endings.hotelDrink;
 };
 
 const getStatLabel = (value: number, labels: [string, string, string]) => {
@@ -492,7 +584,8 @@ function CharacterScene({ mood, visualKey, area }: { mood: OutcomeMood | null; v
 
 export function Game() {
   const [snapshot, setSnapshot] = useState<GameSnapshot>(() => createInitialSnapshot(false));
-  const step = scenario[snapshot.stepIndex];
+  const baseStep = scenario[snapshot.stepIndex];
+  const step = useMemo(() => resolveStepForScene(baseStep, snapshot.target.visualKey), [baseStep, snapshot.target.visualKey]);
   const hints = useMemo(() => getHints(snapshot), [snapshot]);
   const mentalLabel = getStatLabel(snapshot.player.mental, ['低い', '保っている', '安定']);
   const observationLabel = getStatLabel(snapshot.player.observation, ['鈍い', '普通', '冴えている']);
@@ -518,7 +611,52 @@ export function Game() {
     ];
 
     if (step.phase === 'close') {
+      const hotelRoute = getHotelRoute(choice.id);
+
+      if (hotelRoute) {
+        const routeBlock = decideHotelRouteBlock(result.hidden, result.player, choice, result.mood, snapshot.target);
+
+        if (routeBlock) {
+          setSnapshot({
+            ...snapshot,
+            player: result.player,
+            hidden: result.hidden,
+            lastReply: routeBlock.finalReply ?? result.reply,
+            lastMood: result.mood,
+            logs: nextLogs,
+            ending: routeBlock,
+          });
+          return;
+        }
+
+        setSnapshot({
+          ...snapshot,
+          stepIndex: snapshot.stepIndex + 1,
+          hotelRoute,
+          player: result.player,
+          hidden: result.hidden,
+          lastReply: result.reply,
+          lastMood: result.mood,
+          logs: nextLogs,
+        });
+        return;
+      }
+
       const ending = decideEnding(result.hidden, result.player, choice, result.mood, snapshot.target);
+      setSnapshot({
+        ...snapshot,
+        player: result.player,
+        hidden: result.hidden,
+        lastReply: ending.finalReply ?? result.reply,
+        lastMood: result.mood,
+        logs: nextLogs,
+        ending,
+      });
+      return;
+    }
+
+    if (step.phase === 'hotel') {
+      const ending = decideHotelEnding(snapshot.hotelRoute, result.hidden, result.player, choice, result.mood, snapshot.target);
       setSnapshot({
         ...snapshot,
         player: result.player,
