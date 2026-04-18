@@ -139,17 +139,34 @@ const decideEnding = (hidden: HiddenState, player: PlayerState, choice: Choice, 
   }
 
   const warmth = hidden.interest + hidden.vibe - hidden.caution - Math.floor(hidden.timePressure / 2);
+  const canStayLonger = hidden.interest >= 5 && hidden.vibe >= 4 && hidden.caution <= 3 && hidden.timePressure <= 5;
 
   if (choice.id === 'soft-home') {
     const successChance = clamp((warmth - 5) * 0.08 + (player.mental >= 3 ? 0.08 : -0.05), 0.03, 0.38);
-    if (hidden.interest >= 5 && hidden.vibe >= 4 && hidden.caution <= 3 && hidden.timePressure <= 5 && Math.random() < successChance) {
-      return endings.success;
+    if (canStayLonger && Math.random() < successChance) {
+      return endings.hotelDrink;
     }
-    return warmth >= 2 ? endings.contact : endings.fail;
+    return warmth >= 3 ? endings.nextDay : warmth >= 1 ? endings.contact : endings.fail;
+  }
+
+  if (choice.id === 'konbini-hotel') {
+    const successChance = clamp((warmth - 6) * 0.07 + (player.mental >= 4 ? 0.06 : -0.08), 0.02, 0.28);
+    if (canStayLonger && hidden.caution <= 2 && Math.random() < successChance) {
+      return endings.hotelKonbini;
+    }
+    return warmth >= 4 ? endings.nextDay : endings.fail;
   }
 
   if (choice.id === 'contact-close') {
-    return warmth >= -1 ? endings.contact : endings.fail;
+    return warmth >= 2 ? endings.nextDay : warmth >= -1 ? endings.contact : endings.fail;
+  }
+
+  if (choice.id === 'hard-home') {
+    const successChance = clamp((warmth - 7) * 0.06 + (player.mental >= 5 ? 0.04 : -0.1), 0.01, 0.18);
+    if (canStayLonger && hidden.caution <= 2 && Math.random() < successChance) {
+      return endings.hotelDirect;
+    }
+    return warmth >= 4 ? endings.contact : endings.fail;
   }
 
   return warmth >= 4 && Math.random() < 0.15 ? endings.contact : endings.fail;

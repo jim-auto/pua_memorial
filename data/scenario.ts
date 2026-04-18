@@ -39,7 +39,7 @@ export type ScenarioStep = {
   choices: Choice[];
 };
 
-export type EndingId = 'fail' | 'contact' | 'success';
+export type EndingId = 'fail' | 'contact' | 'nextDay' | 'hotelDrink' | 'hotelKonbini' | 'hotelDirect';
 
 export type Ending = {
   id: EndingId;
@@ -256,39 +256,52 @@ export const scenario: ScenarioStep[] = [
     choices: [
       {
         id: 'soft-home',
-        text: 'このまま一杯だけ行く？無理ならここで解散。どっちでも気まずくしないです。',
-        lowMentalText: '一杯だけ行くか、ここで解散か。どっちでも大丈夫です。',
-        intent: '一杯だけを打診しつつ、断っても空気が壊れない形にする。',
+        text: '一杯だけ飲んで、まだ話したかったら近くで休む？無理ならそこで解散。',
+        lowMentalText: '一杯だけ飲むか、ここで解散か。無理なら解散で大丈夫です。',
+        intent: '飲みを挟んで当日ホテルへつなぐ。相手が迷うなら切る。',
         tone: 'soft',
-        effect: { caution: -1, interest: 1, vibe: 1, mental: 1 },
+        effect: { caution: 0, interest: 1, vibe: 1, timePressure: 1, mental: 1 },
         replies: {
-          good: '「一杯だけなら」相手は条件を言葉にする。',
+          good: '「一杯だけなら。そこから先はその時決める」相手は条件を言葉にする。',
           mixed: '「今日は連絡先だけにしませんか」前向きだが、当日は進まない。',
           bad: '「今日は帰ります」距離は保たれる。',
         },
       },
       {
+        id: 'konbini-hotel',
+        text: '店混んでるし、コンビニで一本だけ買ってホテルでだらっと話すのはあり？飲めないならやめとこ。',
+        lowMentalText: 'コンビニで一本だけ買って、ホテルで少し話すのはありですか。無理ならやめます。',
+        intent: '店を挟まずホテルを打診する。通れば早いが、警戒が残ると重い。',
+        tone: 'pushy',
+        effect: { caution: 2, interest: 1, vibe: 0, timePressure: 1, mental: -1 },
+        replies: {
+          good: '「飲める量だけなら。無理はしない約束で」相手は条件を細かく出す。',
+          mixed: '「それはまだ早いです。今日は外で話すくらいで」線を引かれる。',
+          bad: '「ホテルは無理です」会話が終わりに向かう。',
+        },
+      },
+      {
         id: 'contact-close',
-        text: '今日はここで終わり。連絡先だけ交換して、次回ちゃんと会いましょう。',
-        lowMentalText: '今日はここで終わり。連絡先だけ交換できたら。',
-        intent: '当日は引いて、次回アポに切り替える。',
+        text: '今日はここで切って、明日か明後日にちゃんと会いましょう。連絡先だけください。',
+        lowMentalText: '今日はここで切って、明日ちゃんと会えたら。連絡先だけください。',
+        intent: '当日ホテルを狙わず、翌日アポに回す。',
         tone: 'withdraw',
         effect: { caution: -2, interest: 1, vibe: 1, mental: 1 },
         replies: {
-          good: '「それがいいかも。連絡先、交換します？」安心した表情になる。',
-          mixed: '「そうですね」余韻は残る。',
+          good: '「その方が安心かも。明日なら少し空いてます」次の予定が見える。',
+          mixed: '「連絡先だけなら」余韻は残る。',
           bad: '「今日はありがとうございました」丁寧に終わる。',
         },
       },
       {
         id: 'hard-home',
-        text: '正直もうちょい一緒にいたい。駅まで歩くか、店入るか、あなたが選んで。',
-        lowMentalText: 'もうちょい一緒にいたいです。駅までか、店入るか。',
-        intent: '強めに好意を出す。選択権は渡すが、空気が温まっていないと重い。',
+        text: '正直、今かなり一緒にいたい。ホテル行くか、無理ならここで切るか、はっきり選んで。',
+        lowMentalText: '今かなり一緒にいたいです。無理ならここで切ります。',
+        intent: '当日ホテルを強めに確認する。温度が足りないと即終了。',
         tone: 'pushy',
-        effect: { caution: 2, interest: 1, vibe: -1, timePressure: 1, mental: -1 },
+        effect: { caution: 3, interest: 1, vibe: -2, timePressure: 1, mental: -2 },
         replies: {
-          good: '「言い方は嫌じゃないです。でも場所は選びたいです」条件付きで残る。',
+          good: '「はっきり言うんですね。行くなら私が場所選びます」条件付きで残る。',
           mixed: '「今日はそこまでは」会話は終わりに向かう。',
           bad: '「それは無理です」そのまま離れていく。',
         },
@@ -310,11 +323,32 @@ export const endings: Record<EndingId, Ending> = {
     tone: '良い余韻で終わった',
     body: '当日は進まなかったが、相手は安心した様子で連絡先を交換してくれた。次につながる自然な終わり方になった。',
   },
-  success: {
-    id: 'success',
-    title: 'ホテルへ',
-    tone: 'レア成功',
-    body: '一杯だけのつもりで入った店を出たあと、相手はもう少し一緒にいたいと自分の意思を伝えてくれた。無理がないことを確認し、帰る選択肢も残したまま、二人は近くのホテルへ向かった。',
-    finalReply: '「もう少し一緒にいてもいい。無理させないって約束して」相手は自分の条件を言葉にした。',
+  nextDay: {
+    id: 'nextDay',
+    title: '翌日アポ',
+    tone: '当日は引いて次へ',
+    body: '今日は深追いせず、相手が安心できる形で連絡先を交換した。翌日の夕方、改めて待ち合わせる流れになる。',
+    finalReply: '「今日はここまでにしましょう。明日なら、ちゃんと時間作れます」相手は次の予定を言葉にした。',
+  },
+  hotelDrink: {
+    id: 'hotelDrink',
+    title: '一杯からホテルへ',
+    tone: '当日成功',
+    body: '一杯だけのつもりで入った店を出たあと、相手はもう少し一緒にいたいと自分の意思を伝えてくれた。帰る選択肢も残したまま、二人は近くのホテルへ向かった。',
+    finalReply: '「一杯だけのつもりだったけど、もう少し一緒にいてもいい。無理させないって約束して」相手は条件を言葉にした。',
+  },
+  hotelKonbini: {
+    id: 'hotelKonbini',
+    title: 'コンビニ経由ホテル',
+    tone: '当日成功',
+    body: '店には入らず、コンビニで軽い酒と水を買った。飲める量だけにすること、嫌ならすぐ帰ることを確認してから、二人は近くのホテルへ向かった。',
+    finalReply: '「一本だけね。酔わせるのはなし、無理ならすぐ帰る。それでいいなら」相手は条件をはっきりさせた。',
+  },
+  hotelDirect: {
+    id: 'hotelDirect',
+    title: '直ホテル',
+    tone: '超レア成功',
+    body: '遠回しにせず確認したことで、相手も自分の意思をはっきり伝えた。場所は相手が選び、帰る選択肢を残したまま、二人はホテルへ向かった。',
+    finalReply: '「行くなら私が場所を選ぶ。嫌になったら帰る。それでいい？」相手は主導権を持ったまま答えた。',
   },
 };
