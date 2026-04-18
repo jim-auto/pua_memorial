@@ -1,7 +1,18 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { endings, scenario, type Choice, type Ending, type HiddenState, type OutcomeMood, type PlayerState } from '@/data/scenario';
+import {
+  endings,
+  scenario,
+  targetProfiles,
+  type Choice,
+  type Ending,
+  type HiddenState,
+  type OutcomeMood,
+  type PlayerState,
+  type TargetProfile,
+  type TargetRisk,
+} from '@/data/scenario';
 
 type TurnLog = {
   phase: string;
@@ -12,6 +23,7 @@ type TurnLog = {
 
 type GameSnapshot = {
   stepIndex: number;
+  target: TargetProfile;
   player: PlayerState;
   hidden: HiddenState;
   lastReply: string;
@@ -23,23 +35,31 @@ type GameSnapshot = {
 const clamp = (value: number, min = 0, max = 8) => Math.max(min, Math.min(max, value));
 const randomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
 
-const createInitialSnapshot = (randomized = true): GameSnapshot => ({
-  stepIndex: 0,
-  player: {
-    mental: randomized ? randomInt(4, 6) : 5,
-    observation: randomized ? randomInt(3, 5) : 4,
-  },
-  hidden: {
-    caution: randomized ? randomInt(2, 4) : 3,
-    interest: randomized ? randomInt(1, 3) : 2,
-    vibe: randomized ? randomInt(1, 3) : 2,
-    timePressure: randomized ? randomInt(1, 3) : 2,
-  },
-  lastReply: '深呼吸して、相手が立ち止まれる距離で声をかける。',
-  lastMood: null,
-  logs: [],
-  ending: null,
-});
+const hasRisk = (target: TargetProfile, risk: TargetRisk) => target.risks?.includes(risk) ?? false;
+
+const createInitialSnapshot = (randomized = true): GameSnapshot => {
+  const target = randomized ? targetProfiles[randomInt(0, targetProfiles.length - 1)] : targetProfiles[0];
+  const modifier = target.modifier;
+
+  return {
+    stepIndex: 0,
+    target,
+    player: {
+      mental: clamp((randomized ? randomInt(4, 6) : 5) + (modifier.mental ?? 0)),
+      observation: clamp((randomized ? randomInt(3, 5) : 4) + (modifier.observation ?? 0)),
+    },
+    hidden: {
+      caution: clamp((randomized ? randomInt(2, 4) : 3) + (modifier.caution ?? 0)),
+      interest: clamp((randomized ? randomInt(1, 3) : 2) + (modifier.interest ?? 0)),
+      vibe: clamp((randomized ? randomInt(1, 3) : 2) + (modifier.vibe ?? 0)),
+      timePressure: clamp((randomized ? randomInt(1, 3) : 2) + (modifier.timePressure ?? 0)),
+    },
+    lastReply: `ヒット: ${target.label}。${target.summary}`,
+    lastMood: null,
+    logs: [],
+    ending: null,
+  };
+};
 
 const mergeEffect = (base: Choice['effect'], extra?: Choice['effect']) => ({
   caution: (base.caution ?? 0) + (extra?.caution ?? 0),
@@ -102,6 +122,29 @@ const applyChoice = (snapshot: GameSnapshot, choice: Choice) => {
     hidden.vibe -= 1;
   }
 
+  if (choice.tone === 'pushy' && hasRisk(snapshot.target, 'powerRisk')) {
+    hidden.caution += 1;
+    hidden.vibe -= 1;
+    notes.push('圧の強さに反応が硬くなった。');
+  }
+
+  if ((choice.id === 'konbini-hotel' || choice.id === 'hard-home') && hasRisk(snapshot.target, 'troubleRisk')) {
+    hidden.caution += 1;
+    notes.push('条件確認が曖昧なままだと、後で揉めそうな気配がある。');
+  }
+
+  if (choice.id === 'money-hotel' && hasRisk(snapshot.target, 'moneyRisk')) {
+    hidden.caution += 1;
+    hidden.timePressure += 1;
+    notes.push('金額や店の話が出た瞬間、会話の温度が別方向に変わった。');
+  }
+
+  if (choice.id === 'cut-loss' && (hasRisk(snapshot.target, 'troubleRisk') || hasRisk(snapshot.target, 'moneyRisk'))) {
+    player.mental += 1;
+    hidden.caution -= 1;
+    notes.push('違和感を優先して引いたので、事故の芽を潰せた。');
+  }
+
   if (lowMental && choice.tone !== 'withdraw') {
     hidden.interest -= 1;
     player.mental -= 1;
@@ -133,13 +176,27 @@ const applyChoice = (snapshot: GameSnapshot, choice: Choice) => {
   return { hidden, player, mood, reply };
 };
 
-const decideEnding = (hidden: HiddenState, player: PlayerState, choice: Choice, mood: OutcomeMood): Ending => {
-  if (choice.mine || hidden.caution >= 7 || mood === 'bad') {
-    return endings.fail;
-  }
-
+const decideEnding = (hidden: HiddenState, player: PlayerState, choice: Choice, mood: OutcomeMood, target: TargetProfile): Ending => {
   const warmth = hidden.interest + hidden.vibe - hidden.caution - Math.floor(hidden.timePressure / 2);
   const canStayLonger = hidden.interest >= 5 && hidden.vibe >= 4 && hidden.caution <= 3 && hidden.timePressure <= 5;
+  const forcedBad = choice.mine || hidden.caution >= 7 || mood === 'bad';
+  const riskyHotel = choice.id === 'konbini-hotel' || choice.id === 'hard-home';
+
+  if (choice.id === 'cut-loss') {
+    return endings.cutLoss;
+  }
+
+  if (choice.id === 'money-hotel') {
+    return endings.moneyBad;
+  }
+
+  if (hasRisk(target, 'troubleRisk') && riskyHotel && (mood !== 'good' || hidden.caution >= 3 || hidden.timePressure >= 4 || player.observation <= 3)) {
+    return endings.legalTrouble;
+  }
+
+  if (forcedBad) {
+    return choice.tone === 'pushy' ? endings.powerBad : endings.fail;
+  }
 
   if (choice.id === 'soft-home') {
     const successChance = clamp((warmth - 5) * 0.08 + (player.mental >= 3 ? 0.08 : -0.05), 0.03, 0.38);
@@ -162,6 +219,10 @@ const decideEnding = (hidden: HiddenState, player: PlayerState, choice: Choice, 
   }
 
   if (choice.id === 'hard-home') {
+    if (hasRisk(target, 'powerRisk') || hidden.caution >= 4 || player.mental <= 2) {
+      return endings.powerBad;
+    }
+
     const successChance = clamp((warmth - 7) * 0.06 + (player.mental >= 5 ? 0.04 : -0.1), 0.01, 0.18);
     if (canStayLonger && hidden.caution <= 2 && Math.random() < successChance) {
       return endings.hotelDirect;
@@ -181,6 +242,12 @@ const getStatLabel = (value: number, labels: [string, string, string]) => {
 const getHints = (snapshot: GameSnapshot) => {
   const { hidden, player } = snapshot;
   const hints: string[] = [];
+
+  if (hasRisk(snapshot.target, 'moneyRisk')) {
+    hints.push('金の話で流れを動かすと、ぼったくりやマネギラに寄りやすい。');
+  } else if (hasRisk(snapshot.target, 'troubleRisk')) {
+    hints.push('条件確認を飛ばすと後日のトラブルになりやすい。違和感が出たら損切り。');
+  }
 
   if (hidden.caution >= 6) {
     hints.push('警戒が強い。前に出るほど離れそう。');
@@ -429,6 +496,7 @@ export function Game() {
   const mentalLabel = getStatLabel(snapshot.player.mental, ['低い', '保っている', '安定']);
   const observationLabel = getStatLabel(snapshot.player.observation, ['鈍い', '普通', '冴えている']);
   const progress = snapshot.ending ? 100 : ((snapshot.stepIndex + 1) / scenario.length) * 100;
+  const currentPlace = snapshot.target.area === step.place ? step.place : `${snapshot.target.area} / ${step.place}`;
 
   useEffect(() => {
     setSnapshot(createInitialSnapshot());
@@ -449,7 +517,7 @@ export function Game() {
     ];
 
     if (step.phase === 'close') {
-      const ending = decideEnding(result.hidden, result.player, choice, result.mood);
+      const ending = decideEnding(result.hidden, result.player, choice, result.mood, snapshot.target);
       setSnapshot({
         ...snapshot,
         player: result.player,
@@ -470,7 +538,7 @@ export function Game() {
         lastReply: result.reply,
         lastMood: result.mood,
         logs: nextLogs,
-        ending: endings.fail,
+        ending: choice.tone === 'pushy' ? endings.powerBad : endings.fail,
       });
       return;
     }
@@ -497,8 +565,11 @@ export function Game() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-xs font-bold text-teal-700">pua_memorial</p>
-              <h1 className="mt-1 text-2xl font-bold leading-tight text-stone-950 sm:text-3xl">{snapshot.ending ? snapshot.ending.title : step.place}</h1>
+              <h1 className="mt-1 text-2xl font-bold leading-tight text-stone-950 sm:text-3xl">{snapshot.ending ? snapshot.ending.title : currentPlace}</h1>
               <p className="mt-2 text-sm leading-6 text-stone-600">{snapshot.ending ? snapshot.ending.tone : `${step.phaseLabel} / Turn ${snapshot.stepIndex + 1} of ${scenario.length}`}</p>
+              {!snapshot.ending && (
+                <p className="mt-1 text-sm font-semibold leading-6 text-stone-700">相手: {snapshot.target.label}</p>
+              )}
             </div>
             <div className="grid gap-2 text-sm sm:grid-cols-2 lg:w-[25rem]">
               <div className="rounded-md border border-stone-200 bg-stone-50 px-3 py-2">
@@ -588,6 +659,12 @@ export function Game() {
           </section>
 
           <aside className="grid content-start gap-4 xl:sticky xl:top-5">
+            <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
+              <h2 className="text-base font-bold text-stone-950">今回の相手</h2>
+              <p className="mt-3 text-sm font-bold leading-6 text-stone-900">{snapshot.target.label}</p>
+              <p className="mt-1 text-sm leading-6 text-stone-600">{snapshot.target.summary}</p>
+            </section>
+
             <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
               <h2 className="text-base font-bold text-stone-950">曖昧なヒント</h2>
               <div className="mt-3 grid gap-3">

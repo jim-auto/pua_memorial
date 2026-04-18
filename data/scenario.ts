@@ -39,7 +39,30 @@ export type ScenarioStep = {
   choices: Choice[];
 };
 
-export type EndingId = 'fail' | 'contact' | 'nextDay' | 'hotelDrink' | 'hotelKonbini' | 'hotelDirect';
+export type TargetRisk = 'powerRisk' | 'troubleRisk' | 'moneyRisk';
+
+export type TargetProfileId = 'office' | 'friendly' | 'guarded' | 'hurried' | 'kabukicho' | 'trouble';
+
+export type TargetProfile = {
+  id: TargetProfileId;
+  label: string;
+  area: string;
+  summary: string;
+  modifier: GameEffect;
+  risks?: TargetRisk[];
+};
+
+export type EndingId =
+  | 'fail'
+  | 'contact'
+  | 'nextDay'
+  | 'hotelDrink'
+  | 'hotelKonbini'
+  | 'hotelDirect'
+  | 'powerBad'
+  | 'legalTrouble'
+  | 'moneyBad'
+  | 'cutLoss';
 
 export type Ending = {
   id: EndingId;
@@ -48,6 +71,54 @@ export type Ending = {
   tone: string;
   finalReply?: string;
 };
+
+export const targetProfiles: TargetProfile[] = [
+  {
+    id: 'office',
+    label: 'しごおわ普通',
+    area: '渋谷スクランブル',
+    summary: '反応は読みやすい。雑に押すと普通に冷める。',
+    modifier: {},
+  },
+  {
+    id: 'friendly',
+    label: 'ノリ良い友達待ち',
+    area: 'センター街入口',
+    summary: '笑いは拾うが、待ち合わせ前で時間は短い。',
+    modifier: { caution: -1, interest: 1, vibe: 2, timePressure: 1 },
+  },
+  {
+    id: 'guarded',
+    label: '警戒強めソロ',
+    area: '神南の横断歩道',
+    summary: '引き際を見せないとすぐ固まる。圧に弱い。',
+    modifier: { caution: 2, vibe: -1, observation: 1 },
+    risks: ['powerRisk'],
+  },
+  {
+    id: 'hurried',
+    label: '終電前しごおわ',
+    area: '井の頭通り',
+    summary: '時間圧が強い。短く刺せないと終わる。',
+    modifier: { caution: 1, timePressure: 2, mental: -1 },
+  },
+  {
+    id: 'kabukicho',
+    label: '歌舞伎町の女',
+    area: '歌舞伎町入口',
+    summary: 'ノリは強いが、金の話に寄せると別ゲームになる。',
+    modifier: { interest: 2, vibe: 1, caution: 1, timePressure: 1 },
+    risks: ['moneyRisk', 'troubleRisk'],
+  },
+  {
+    id: 'trouble',
+    label: '怪しい女',
+    area: '道玄坂の路地前',
+    summary: '乗っているように見えるが、条件確認を飛ばすと事故る。',
+    modifier: { caution: -1, interest: 2, vibe: 1, timePressure: 1 },
+    risks: ['troubleRisk'],
+  },
+];
 
 export const scenario: ScenarioStep[] = [
   {
@@ -306,6 +377,32 @@ export const scenario: ScenarioStep[] = [
           bad: '「それは無理です」そのまま離れていく。',
         },
       },
+      {
+        id: 'cut-loss',
+        text: 'この流れ、不同意とか店の話をちらつかせる気配あるので損切り。今日はここで解散します。',
+        lowMentalText: '違和感あるので今日は帰ります。安全に帰ってください。',
+        intent: '美人局や後日の不同意トラブルの気配を見たら、勝ちを捨てて事故を避ける。',
+        tone: 'withdraw',
+        effect: { caution: -3, interest: -2, vibe: -1, timePressure: -1, mental: 1 },
+        replies: {
+          good: '「そう。ちゃんとしてるんですね」少しだけ意外そうにして離れる。',
+          mixed: '「急に真面目ですね」温度は落ちるが、事故の匂いも消える。',
+          bad: '「はいはい」雑に流されるが、深追いは止まる。',
+        },
+      },
+      {
+        id: 'money-hotel',
+        text: '歌舞伎町っぽいノリなら、正直お金払うからホテル行かない？条件あるなら先に言って。',
+        lowMentalText: '条件あるなら払うのでホテル行けますか。無理ならやめます。',
+        intent: '金で距離を詰めるマネギラ。相手次第では即事故か、ぼったくりに変わる。',
+        tone: 'pushy',
+        effect: { caution: 3, interest: 1, vibe: -2, timePressure: 1, mental: -2 },
+        replies: {
+          good: '「そういう話なら、先に条件全部決めて」笑っているが、目は値踏みしている。',
+          mixed: '「お金の話するんだ」温度が一段落ちる。',
+          bad: '「無理。そういう人なんですね」空気が閉じる。',
+        },
+      },
     ],
   },
 ];
@@ -350,5 +447,33 @@ export const endings: Record<EndingId, Ending> = {
     tone: '超レア成功',
     body: '遠回しにせず確認したことで、相手も自分の意思をはっきり伝えた。場所は相手が選び、帰る選択肢を残したまま、二人はホテルへ向かった。',
     finalReply: '「行くなら私が場所を選ぶ。嫌になったら帰る。それでいい？」相手は主導権を持ったまま答えた。',
+  },
+  powerBad: {
+    id: 'powerBad',
+    title: 'パワギラバッドエンド',
+    tone: '圧だけが残った',
+    body: '強く詰めたことで、相手の表情が一気に閉じた。周囲の視線も刺さり、会話はもう戻らない。押し切ろうとした瞬間にゲームは終わった。',
+    finalReply: '「怖いです。もう話しかけないでください」相手は距離を取って、人混みに戻った。',
+  },
+  legalTrouble: {
+    id: 'legalTrouble',
+    title: '不同意トラブルエンド',
+    tone: '確認を飛ばした代償',
+    body: '酒やホテルの流れで、相手の条件確認を雑にしたことが後日トラブル化した。「同意が曖昧だった」と相談され、メッセージや会話の記録も残る。ここから先は攻略ではなく、ただの事故処理になる。',
+    finalReply: '「あの時、ちゃんと確認してなかったですよね」その一文で流れは完全に終わった。',
+  },
+  moneyBad: {
+    id: 'moneyBad',
+    title: 'マネギラバッドエンド',
+    tone: '金で雑に詰めた',
+    body: '金額の話に頼った瞬間、会話はノリでも恋愛でもなく取引と警戒に変わった。店名、先払い、追加条件が次々に出て、断ると相手は消える。残ったのは財布ダメージと最悪の空気だけだった。',
+    finalReply: '「じゃあ先払い。店もこっち指定ね」その笑い方で、もう流れが終わったとわかった。',
+  },
+  cutLoss: {
+    id: 'cutLoss',
+    title: '損切り撤退',
+    tone: '事故回避',
+    body: '違和感を勝ち筋より優先して、その場で会話を切った。何も起きなかったが、何も起きないことが最良の結果だった。メンタルを残して次へ回れる。',
+    finalReply: '「じゃあここで」相手はあっさり離れた。追わなかったので、面倒な尾は引かなかった。',
   },
 };
