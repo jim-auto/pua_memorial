@@ -432,14 +432,15 @@ export function Game() {
     ];
 
     if (step.phase === 'close') {
+      const ending = decideEnding(result.hidden, result.player, choice, result.mood);
       setSnapshot({
         ...snapshot,
         player: result.player,
         hidden: result.hidden,
-        lastReply: result.reply,
+        lastReply: ending.finalReply ?? result.reply,
         lastMood: result.mood,
         logs: nextLogs,
-        ending: decideEnding(result.hidden, result.player, choice, result.mood),
+        ending,
       });
       return;
     }

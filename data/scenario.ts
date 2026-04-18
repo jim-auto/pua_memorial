@@ -46,6 +46,7 @@ export type Ending = {
   title: string;
   body: string;
   tone: string;
+  finalReply?: string;
 };
 
 export const scenario: ScenarioStep[] = [
@@ -311,8 +312,9 @@ export const endings: Record<EndingId, Ending> = {
   },
   success: {
     id: 'success',
-    title: '自然な流れ',
+    title: 'ホテルへ',
     tone: 'レア成功',
-    body: '相手は少し考えてから、自分の条件を伝えてくれた。無理のない確認を重ねながら、二人は静かな通りへ歩き出した。',
+    body: '一杯だけのつもりで入った店を出たあと、相手はもう少し一緒にいたいと自分の意思を伝えてくれた。無理がないことを確認し、帰る選択肢も残したまま、二人は近くのホテルへ向かった。',
+    finalReply: '「もう少し一緒にいてもいい。無理させないって約束して」相手は自分の条件を言葉にした。',
   },
 };
