@@ -1,5 +1,22 @@
 # Image Generation Prompts
 
+## README Hero
+
+保存先: `assets/readme/hero.png`。組み込みの画像生成ツール（image_gen）で作成。ゲーム画像生成スクリプトの対象外です。
+
+最終プロンプト:
+
+```text
+Use case: stylized-concept
+Asset type: wide landscape GitHub README hero banner for the Japanese visual novel game pua_memorial.
+Primary request: A polished cinematic cover illustration for a branching conversation game set in Tokyo at night.
+Scene: Shibuya street after light rain, wet crosswalk reflecting teal, rose and amber neon, distant abstract storefronts and city haze.
+Subject: two clearly adult Japanese people in their mid twenties, a man in a dark casual jacket and a woman in a light beige coat, standing a comfortable distance apart in a natural conversation on the right half of the composition. Thoughtful subtle expressions, grounded everyday atmosphere.
+Style: refined modern Japanese visual novel key art, detailed 2D illustration, clean linework, soft painterly shadows, cinematic neon rim lighting.
+Composition: panoramic landscape approximately 2:1. Left half has quiet dark indigo negative space with beautifully legible large ivory title "pua_memorial" and a smaller uppercase subtitle "TOKYO NIGHT / CONVERSATION GAME". Strong editorial cover composition, balanced typography, no UI frames.
+Constraints: exact English title and subtitle only; no Japanese text, no readable shop names, no brand logos, no watermark, no speech bubbles. Fully clothed adult characters.
+```
+
 API keyなしで、ChatGPT Images / Scenario / PixelLab などにそのまま投げるための素材生成メモです。
 
 ## Output Files
