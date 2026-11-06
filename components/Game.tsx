@@ -1,380 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { endings, scenario, type EndingId, type OutcomeMood, type SceneVisualKey } from '@/data/scenario';
 import {
-  endings,
-  scenario,
-  targetProfiles,
-  type Choice,
-  type Ending,
-  type HiddenState,
-  type OutcomeMood,
-  type PlayerState,
-  type SceneVisualKey,
-  type TargetProfile,
-  type TargetRisk,
-} from '@/data/scenario';
-
-type TurnLog = {
-  phase: string;
-  choiceText: string;
-  reply: string;
-  mood: OutcomeMood;
-};
-
-type HotelRoute = 'drink' | 'konbini' | 'direct' | null;
-
-type GameSnapshot = {
-  stepIndex: number;
-  target: TargetProfile;
-  hotelRoute: HotelRoute;
-  player: PlayerState;
-  hidden: HiddenState;
-  lastReply: string;
-  lastMood: OutcomeMood | null;
-  logs: TurnLog[];
-  ending: Ending | null;
-};
-
-const clamp = (value: number, min = 0, max = 8) => Math.max(min, Math.min(max, value));
-const randomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
-
-const hasRisk = (target: TargetProfile, risk: TargetRisk) => target.risks?.includes(risk) ?? false;
-const getHotelRoute = (choiceId: string): HotelRoute => {
-  if (choiceId === 'soft-home') return 'drink';
-  if (choiceId === 'konbini-hotel') return 'konbini';
-  if (choiceId === 'hard-home') return 'direct';
-  return null;
-};
-
-const resolveChoiceForScene = (choice: Choice, visualKey: SceneVisualKey): Choice => {
-  const copy = choice.sceneCopies?.[visualKey];
-
-  if (!copy) return choice;
-
-  return {
-    ...choice,
-    ...copy,
-    replies: {
-      ...choice.replies,
-      ...(copy.replies ?? {}),
-    },
-  };
-};
-
-const resolveStepForScene = (step: (typeof scenario)[number], visualKey: SceneVisualKey) => {
-  const copy = step.sceneCopies?.[visualKey];
-
-  return {
-    ...step,
-    ...copy,
-    choices: step.choices.map((choice) => resolveChoiceForScene(choice, visualKey)),
-  };
-};
-
-const createInitialSnapshot = (randomized = true): GameSnapshot => {
-  const target = randomized ? targetProfiles[randomInt(0, targetProfiles.length - 1)] : targetProfiles[0];
-  const modifier = target.modifier;
-
-  return {
-    stepIndex: 0,
-    target,
-    hotelRoute: null,
-    player: {
-      mental: clamp((randomized ? randomInt(4, 6) : 5) + (modifier.mental ?? 0)),
-      observation: clamp((randomized ? randomInt(3, 5) : 4) + (modifier.observation ?? 0)),
-    },
-    hidden: {
-      caution: clamp((randomized ? randomInt(2, 4) : 3) + (modifier.caution ?? 0)),
-      interest: clamp((randomized ? randomInt(1, 3) : 2) + (modifier.interest ?? 0)),
-      vibe: clamp((randomized ? randomInt(1, 3) : 2) + (modifier.vibe ?? 0)),
-      timePressure: clamp((randomized ? randomInt(1, 3) : 2) + (modifier.timePressure ?? 0)),
-    },
-    lastReply: `ヒット: ${target.label}。${target.summary}`,
-    lastMood: null,
-    logs: [],
-    ending: null,
-  };
-};
-
-const mergeEffect = (base: Choice['effect'], extra?: Choice['effect']) => ({
-  caution: (base.caution ?? 0) + (extra?.caution ?? 0),
-  interest: (base.interest ?? 0) + (extra?.interest ?? 0),
-  vibe: (base.vibe ?? 0) + (extra?.vibe ?? 0),
-  timePressure: (base.timePressure ?? 0) + (extra?.timePressure ?? 0),
-  mental: (base.mental ?? 0) + (extra?.mental ?? 0),
-  observation: (base.observation ?? 0) + (extra?.observation ?? 0),
-});
-
-const applyChoice = (snapshot: GameSnapshot, choice: Choice) => {
-  const lowMental = snapshot.player.mental <= 2;
-  const effect = mergeEffect(choice.effect, lowMental ? choice.lowMentalEffect : undefined);
-  const hidden = { ...snapshot.hidden };
-  const player = { ...snapshot.player };
-  const notes: string[] = [];
-
-  hidden.caution += effect.caution;
-  hidden.interest += effect.interest;
-  hidden.vibe += effect.vibe;
-  hidden.timePressure += effect.timePressure;
-  player.mental += effect.mental;
-  player.observation += effect.observation;
-
-  if (!choice.mine && Math.random() < 0.42) {
-    hidden.interest += randomInt(-1, 1);
-  }
-
-  if (!choice.mine && Math.random() < 0.36) {
-    hidden.vibe += randomInt(-1, 1);
-  }
-
-  if (Math.random() < 0.18) {
-    hidden.timePressure += 1;
-    notes.push('スマホの通知で、相手が一瞬だけ時間を気にした。');
-  }
-
-  if (choice.tone === 'withdraw' && snapshot.hidden.caution >= 4) {
-    hidden.caution -= 1;
-    hidden.interest += 1;
-    notes.push('引く余白を見せたことで、少し安心感が出た。');
-  }
-
-  if (choice.tone === 'withdraw' && snapshot.hidden.interest >= 5 && snapshot.hidden.caution <= 2) {
-    hidden.interest -= 1;
-    notes.push('良い空気の中で引きすぎて、少しだけ熱が落ちた。');
-  }
-
-  if (choice.tone === 'pushy' && snapshot.hidden.caution >= 3) {
-    hidden.caution += 1;
-    hidden.vibe -= 1;
-  }
-
-  if (choice.tone === 'listen' && snapshot.hidden.vibe >= 3) {
-    hidden.interest += 1;
-  }
-
-  if (choice.tone === 'playful' && snapshot.hidden.vibe <= 1) {
-    hidden.caution += 1;
-    hidden.vibe -= 1;
-  }
-
-  if (choice.tone === 'pushy' && hasRisk(snapshot.target, 'powerRisk')) {
-    hidden.caution += 1;
-    hidden.vibe -= 1;
-    notes.push('圧の強さに反応が硬くなった。');
-  }
-
-  if ((choice.id === 'konbini-hotel' || choice.id === 'hard-home') && hasRisk(snapshot.target, 'troubleRisk')) {
-    hidden.caution += 1;
-    notes.push('条件確認が曖昧なままだと、後で揉めそうな気配がある。');
-  }
-
-  if (choice.id === 'money-hotel' && hasRisk(snapshot.target, 'moneyRisk')) {
-    hidden.caution += 1;
-    hidden.timePressure += 1;
-    notes.push('金額や店の話が出た瞬間、会話の温度が別方向に変わった。');
-  }
-
-  if (choice.id === 'cut-loss' && (hasRisk(snapshot.target, 'troubleRisk') || hasRisk(snapshot.target, 'moneyRisk'))) {
-    player.mental += 1;
-    hidden.caution -= 1;
-    notes.push('違和感を優先して引いたので、事故の芽を潰せた。');
-  }
-
-  if (lowMental && choice.tone !== 'withdraw') {
-    hidden.interest -= 1;
-    player.mental -= 1;
-  }
-
-  hidden.caution = clamp(hidden.caution);
-  hidden.interest = clamp(hidden.interest);
-  hidden.vibe = clamp(hidden.vibe);
-  hidden.timePressure = clamp(hidden.timePressure);
-  player.mental = clamp(player.mental);
-  player.observation = clamp(player.observation);
-
-  const flowScore =
-    hidden.interest +
-    hidden.vibe -
-    hidden.caution -
-    Math.floor(hidden.timePressure / 2) +
-    randomInt(-1, 1);
-
-  let mood: OutcomeMood = 'mixed';
-  if (choice.mine || hidden.caution >= 7 || flowScore <= -2) {
-    mood = 'bad';
-  } else if (flowScore >= 4) {
-    mood = 'good';
-  }
-
-  const reply = [choice.replies[mood], ...notes].join(' ');
-
-  return { hidden, player, mood, reply };
-};
-
-const decideHotelRouteBlock = (hidden: HiddenState, player: PlayerState, choice: Choice, mood: OutcomeMood, target: TargetProfile): Ending | null => {
-  const forcedBad = choice.mine || hidden.caution >= 7 || mood === 'bad';
-  const riskyHotel = choice.id === 'konbini-hotel' || choice.id === 'hard-home';
-
-  if (hasRisk(target, 'troubleRisk') && riskyHotel && (mood !== 'good' || hidden.caution >= 3 || hidden.timePressure >= 4 || player.observation <= 3)) {
-    return endings.legalTrouble;
-  }
-
-  if (forcedBad) {
-    return choice.tone === 'pushy' ? endings.powerBad : endings.fail;
-  }
-
-  if (choice.id === 'hard-home' && (hasRisk(target, 'powerRisk') || hidden.caution >= 4 || player.mental <= 2)) {
-    return endings.powerBad;
-  }
-
-  return null;
-};
-
-const decideEnding = (hidden: HiddenState, player: PlayerState, choice: Choice, mood: OutcomeMood, target: TargetProfile): Ending => {
-  const warmth = hidden.interest + hidden.vibe - hidden.caution - Math.floor(hidden.timePressure / 2);
-  const canStayLonger = hidden.interest >= 5 && hidden.vibe >= 4 && hidden.caution <= 3 && hidden.timePressure <= 5;
-  const forcedBad = choice.mine || hidden.caution >= 7 || mood === 'bad';
-  const riskyHotel = choice.id === 'konbini-hotel' || choice.id === 'hard-home';
-
-  if (choice.id === 'cut-loss') {
-    return endings.cutLoss;
-  }
-
-  if (choice.id === 'money-hotel') {
-    return endings.moneyBad;
-  }
-
-  if (hasRisk(target, 'troubleRisk') && riskyHotel && (mood !== 'good' || hidden.caution >= 3 || hidden.timePressure >= 4 || player.observation <= 3)) {
-    return endings.legalTrouble;
-  }
-
-  if (forcedBad) {
-    return choice.tone === 'pushy' ? endings.powerBad : endings.fail;
-  }
-
-  if (choice.id === 'soft-home') {
-    const successChance = clamp((warmth - 5) * 0.08 + (player.mental >= 3 ? 0.08 : -0.05), 0.03, 0.38);
-    if (canStayLonger && Math.random() < successChance) {
-      return endings.hotelDrink;
-    }
-    return warmth >= 3 ? endings.nextDay : warmth >= 1 ? endings.contact : endings.fail;
-  }
-
-  if (choice.id === 'konbini-hotel') {
-    const successChance = clamp((warmth - 6) * 0.07 + (player.mental >= 4 ? 0.06 : -0.08), 0.02, 0.28);
-    if (canStayLonger && hidden.caution <= 2 && Math.random() < successChance) {
-      return endings.hotelKonbini;
-    }
-    return warmth >= 4 ? endings.nextDay : endings.fail;
-  }
-
-  if (choice.id === 'contact-close') {
-    return warmth >= 2 ? endings.nextDay : warmth >= -1 ? endings.contact : endings.fail;
-  }
-
-  if (choice.id === 'hard-home') {
-    if (hasRisk(target, 'powerRisk') || hidden.caution >= 4 || player.mental <= 2) {
-      return endings.powerBad;
-    }
-
-    const successChance = clamp((warmth - 7) * 0.06 + (player.mental >= 5 ? 0.04 : -0.1), 0.01, 0.18);
-    if (canStayLonger && hidden.caution <= 2 && Math.random() < successChance) {
-      return endings.hotelDirect;
-    }
-    return warmth >= 4 ? endings.contact : endings.fail;
-  }
-
-  return warmth >= 4 && Math.random() < 0.15 ? endings.contact : endings.fail;
-};
-
-const decideHotelEnding = (hotelRoute: HotelRoute, hidden: HiddenState, player: PlayerState, choice: Choice, mood: OutcomeMood, target: TargetProfile): Ending => {
-  const warmth = hidden.interest + hidden.vibe - hidden.caution - Math.floor(hidden.timePressure / 2);
-  const canProceed = hidden.interest >= 4 && hidden.vibe >= 3 && hidden.caution <= 4 && player.mental >= 2;
-
-  if (choice.id === 'hotel-final-next-day') {
-    return warmth >= 1 ? endings.nextDay : endings.contact;
-  }
-
-  if (choice.id === 'hotel-final-push') {
-    if (hasRisk(target, 'troubleRisk') || hasRisk(target, 'moneyRisk') || hidden.caution >= 3 || player.observation <= 3) {
-      return endings.legalTrouble;
-    }
-    return endings.powerBad;
-  }
-
-  if (choice.mine || hidden.caution >= 7 || mood === 'bad') {
-    return choice.tone === 'pushy' ? endings.powerBad : warmth >= 1 ? endings.nextDay : endings.fail;
-  }
-
-  if (!canProceed) {
-    return warmth >= 1 ? endings.nextDay : endings.fail;
-  }
-
-  if (hasRisk(target, 'troubleRisk') && hidden.caution >= 3 && choice.id !== 'hotel-final-next-day') {
-    return endings.legalTrouble;
-  }
-
-  if (choice.id === 'hotel-final-supplies' || hotelRoute === 'konbini') {
-    return endings.hotelKonbini;
-  }
-
-  if (hotelRoute === 'direct') {
-    return endings.hotelDirect;
-  }
-
-  return endings.hotelDrink;
-};
-
-const getStatLabel = (value: number, labels: [string, string, string]) => {
-  if (value <= 2) return labels[0];
-  if (value <= 5) return labels[1];
-  return labels[2];
-};
-
-const getHints = (snapshot: GameSnapshot) => {
-  const { hidden, player } = snapshot;
-  const hints: string[] = [];
-
-  if (hasRisk(snapshot.target, 'moneyRisk')) {
-    hints.push('金の話で流れを動かすと、ぼったくりやマネギラに寄りやすい。');
-  } else if (hasRisk(snapshot.target, 'troubleRisk')) {
-    hints.push('条件確認を飛ばすと後日のトラブルになりやすい。違和感が出たら損切り。');
-  }
-
-  if (hidden.caution >= 6) {
-    hints.push('警戒が強い。前に出るほど離れそう。');
-  } else if (hidden.caution >= 4) {
-    hints.push('少し警戒しているかも。');
-  } else {
-    hints.push('距離感は今のところ崩れていない。');
-  }
-
-  if (player.observation >= 4) {
-    if (hidden.timePressure >= 5) {
-      hints.push('時間を気にしている仕草が増えた。');
-    } else if (hidden.interest >= 5 && hidden.vibe >= 4) {
-      hints.push('会話の温度は上がっている。急がない方がよさそう。');
-    } else if (hidden.vibe <= 2) {
-      hints.push('まだテンポが合いきっていない。');
-    } else {
-      hints.push('反応は悪くないが、決め手は薄い。');
-    }
-  } else {
-    hints.push('細かい反応までは読み切れない。');
-  }
-
-  if (snapshot.player.mental <= 2) {
-    hints.push('言葉が弱くなりやすい。短く整えたい。');
-  }
-
-  return hints.slice(0, 3);
-};
-
-const getChoiceText = (choice: Choice, mental: number) => {
-  if (mental <= 2 && choice.lowMentalText) return choice.lowMentalText;
-  return choice.text;
-};
+  createInitialSnapshot, resolveStepForScene, playChoice, continueConversation, useFocus,
+  getHints, getStatLabel, getChoiceText, getObservation, getDebrief, toneLabels,
+  type GameSnapshot,
+} from '@/lib/game';
 
 const moodClass: Record<OutcomeMood, string> = {
   good: 'border-emerald-400 bg-emerald-50 text-emerald-950',
@@ -583,7 +215,14 @@ function CharacterScene({ mood, visualKey, area }: { mood: OutcomeMood | null; v
 }
 
 export function Game() {
-  const [snapshot, setSnapshot] = useState<GameSnapshot>(() => createInitialSnapshot(false));
+  const [snapshot, setSnapshot] = useState<GameSnapshot>(() => createInitialSnapshot(0));
+  const [collection, setCollection] = useState<EndingId[]>([]);
+  const [storageReady, setStorageReady] = useState(false);
+  const interactionRef = useRef<HTMLDivElement>(null);
+  const lastLog = snapshot.logs.at(-1);
+  const moodLabels = { good: '会話がほぐれた', mixed: 'まだ様子を見ている', bad: '距離ができた' };
+  const debrief = snapshot.ending ? getDebrief(snapshot) : [];
+
   const baseStep = scenario[snapshot.stepIndex];
   const step = useMemo(() => resolveStepForScene(baseStep, snapshot.target.visualKey), [baseStep, snapshot.target.visualKey]);
   const hints = useMemo(() => getHints(snapshot), [snapshot]);
@@ -594,107 +233,34 @@ export function Game() {
 
   useEffect(() => {
     setSnapshot(createInitialSnapshot());
+    try {
+      const stored: unknown = JSON.parse(localStorage.getItem('pua-memorial-endings-v1') ?? '[]');
+      if (Array.isArray(stored)) {
+        setCollection([...new Set(stored.filter((id): id is EndingId => typeof id === 'string' && Object.prototype.hasOwnProperty.call(endings, id)))]);
+      }
+    } catch { /* The current run remains playable when storage is unavailable. */ }
+    setStorageReady(true);
   }, []);
 
-  const choose = (choice: Choice) => {
-    if (snapshot.ending) return;
+  useEffect(() => {
+    if (!storageReady || !snapshot.ending) return;
+    const id = snapshot.ending.id;
+    setCollection((current) => current.includes(id) ? current : [...current, id]);
+  }, [storageReady, snapshot.ending]);
 
-    const result = applyChoice(snapshot, choice);
-    const nextLogs = [
-      ...snapshot.logs,
-      {
-        phase: step.phaseLabel,
-        choiceText: getChoiceText(choice, snapshot.player.mental),
-        reply: result.reply,
-        mood: result.mood,
-      },
-    ];
+  useEffect(() => {
+    if (!storageReady) return;
+    try { localStorage.setItem('pua-memorial-endings-v1', JSON.stringify(collection)); }
+    catch { /* Collection still works in memory for this session. */ }
+  }, [collection, storageReady]);
 
-    if (step.phase === 'close') {
-      const hotelRoute = getHotelRoute(choice.id);
+  useEffect(() => {
+    if (snapshot.logs.length > 0) interactionRef.current?.focus();
+  }, [snapshot.logs.length, snapshot.awaitingContinue]);
 
-      if (hotelRoute) {
-        const routeBlock = decideHotelRouteBlock(result.hidden, result.player, choice, result.mood, snapshot.target);
-
-        if (routeBlock) {
-          setSnapshot({
-            ...snapshot,
-            player: result.player,
-            hidden: result.hidden,
-            lastReply: routeBlock.finalReply ?? result.reply,
-            lastMood: result.mood,
-            logs: nextLogs,
-            ending: routeBlock,
-          });
-          return;
-        }
-
-        setSnapshot({
-          ...snapshot,
-          stepIndex: snapshot.stepIndex + 1,
-          hotelRoute,
-          player: result.player,
-          hidden: result.hidden,
-          lastReply: result.reply,
-          lastMood: result.mood,
-          logs: nextLogs,
-        });
-        return;
-      }
-
-      const ending = decideEnding(result.hidden, result.player, choice, result.mood, snapshot.target);
-      setSnapshot({
-        ...snapshot,
-        player: result.player,
-        hidden: result.hidden,
-        lastReply: ending.finalReply ?? result.reply,
-        lastMood: result.mood,
-        logs: nextLogs,
-        ending,
-      });
-      return;
-    }
-
-    if (step.phase === 'hotel') {
-      const ending = decideHotelEnding(snapshot.hotelRoute, result.hidden, result.player, choice, result.mood, snapshot.target);
-      setSnapshot({
-        ...snapshot,
-        player: result.player,
-        hidden: result.hidden,
-        lastReply: ending.finalReply ?? result.reply,
-        lastMood: result.mood,
-        logs: nextLogs,
-        ending,
-      });
-      return;
-    }
-
-    if (result.hidden.caution >= 8) {
-      setSnapshot({
-        ...snapshot,
-        player: result.player,
-        hidden: result.hidden,
-        lastReply: result.reply,
-        lastMood: result.mood,
-        logs: nextLogs,
-        ending: choice.tone === 'pushy' ? endings.powerBad : endings.fail,
-      });
-      return;
-    }
-
-    setSnapshot({
-      ...snapshot,
-      stepIndex: snapshot.stepIndex + 1,
-      player: result.player,
-      hidden: result.hidden,
-      lastReply: result.reply,
-      lastMood: result.mood,
-      logs: nextLogs,
-    });
-  };
-
-  const restart = () => {
-    setSnapshot(createInitialSnapshot());
+  const choose = (choiceId: string) => setSnapshot((current) => playChoice(current, choiceId));
+  const restart = (sameEncounter = false) => {
+    setSnapshot(createInitialSnapshot(sameEncounter ? snapshot.seed : undefined));
   };
 
   return (
@@ -705,7 +271,7 @@ export function Game() {
             <div>
               <p className="text-xs font-bold text-teal-700">pua_memorial</p>
               <h1 className="mt-1 text-2xl font-bold leading-tight text-stone-950 sm:text-3xl">{snapshot.ending ? snapshot.ending.title : currentPlace}</h1>
-              <p className="mt-2 text-sm leading-6 text-stone-600">{snapshot.ending ? snapshot.ending.tone : `${step.phaseLabel} / Turn ${snapshot.stepIndex + 1} of ${scenario.length}`}</p>
+              <p className="mt-2 text-sm leading-6 text-stone-600">{snapshot.ending ? snapshot.ending.tone : `${step.phaseLabel} / ${snapshot.stepIndex + 1}ターン目・最大6ターン`}</p>
               {!snapshot.ending && (
                 <p className="mt-1 text-sm font-semibold leading-6 text-stone-700">相手: {snapshot.target.label}</p>
               )}
@@ -753,12 +319,33 @@ export function Game() {
                 </div>
                 <div className="border-l-4 border-teal-700 bg-teal-50 px-4 py-3">
                   <p className="text-xs font-bold text-teal-800">相手の言葉</p>
-                  <p className="mt-2 text-xl font-semibold leading-9 text-stone-950">{snapshot.ending ? snapshot.lastReply : step.npcLine}</p>
+                  <p className="mt-2 text-xl font-semibold leading-9 text-stone-950">{snapshot.ending || snapshot.awaitingContinue ? snapshot.lastReply : step.npcLine}</p>
                 </div>
               </div>
 
-              {!snapshot.ending ? (
-                <div className="mt-5">
+              <div ref={interactionRef} tabIndex={-1} className="mt-5 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-700">
+              {snapshot.awaitingContinue && !snapshot.ending ? (
+                <div className={`rounded-md border p-5 ${snapshot.lastMood ? moodClass[snapshot.lastMood] : ''}`}>
+                  <p className="text-xs font-bold">返答の結果 / {snapshot.lastMood && moodLabels[snapshot.lastMood]}</p>
+                  <p className="mt-2 text-base leading-8">{lastLog?.reply}</p>
+                  {lastLog?.feedback.map((note) => <p key={note} className="mt-3 rounded-md bg-white/70 px-3 py-2 text-sm font-semibold leading-6">{note}</p>)}
+                  <button type="button" onClick={() => setSnapshot(continueConversation)} className="mt-5 rounded-md bg-stone-950 px-5 py-3 font-bold text-white hover:bg-teal-800 focus:outline-none focus:ring-2 focus:ring-teal-700 focus:ring-offset-2">
+                    会話を続ける →
+                  </button>
+                </div>
+              ) : !snapshot.ending ? (
+                <div>
+                  <div className="mb-5 rounded-md border border-indigo-200 bg-indigo-50 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <p className="text-sm font-bold text-indigo-950">集中力 {snapshot.focus} / 2</p>
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" disabled={!snapshot.focus || snapshot.observed} onClick={() => setSnapshot((current) => useFocus(current, 'observe'))} className="rounded-md border border-indigo-300 bg-white px-3 py-2 text-sm font-bold text-indigo-950 hover:bg-indigo-100 focus:ring-2 focus:ring-indigo-700 disabled:cursor-not-allowed disabled:opacity-40">相手を観察する −1</button>
+                        <button type="button" disabled={!snapshot.focus || snapshot.player.mental >= 8} onClick={() => setSnapshot((current) => useFocus(current, 'breathe'))} className="rounded-md border border-indigo-300 bg-white px-3 py-2 text-sm font-bold text-indigo-950 hover:bg-indigo-100 focus:ring-2 focus:ring-indigo-700 disabled:cursor-not-allowed disabled:opacity-40">深呼吸する −1</button>
+                      </div>
+                    </div>
+                    <p className="mt-2 text-xs leading-6 text-indigo-900">1プレイで2回だけ。観察は仕草の手がかりと観察力＋2、深呼吸はメンタル＋3。ターンは進みません。</p>
+                    {snapshot.observed && <ul className="mt-3 grid gap-2 border-t border-indigo-200 pt-3 text-sm leading-6 text-indigo-950" aria-live="polite">{getObservation(snapshot).map((note) => <li key={note}>・{note}</li>)}</ul>}
+                  </div>
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <p className="text-xs font-bold text-stone-500">選択</p>
                     <p className="text-sm font-medium text-stone-500">次の返しを選ぶ</p>
@@ -768,14 +355,15 @@ export function Game() {
                       <button
                         key={choice.id}
                         type="button"
-                        onClick={() => choose(choice)}
+                        onClick={() => choose(choice.id)}
                         className="group grid min-h-[6.5rem] grid-cols-[2.75rem_1fr] items-start gap-3 rounded-md border-2 border-stone-200 bg-[#fcfcfb] p-4 text-left transition hover:-translate-y-0.5 hover:border-teal-700 hover:bg-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-teal-700 focus:ring-offset-2"
-                        aria-label={`選択肢 ${index + 1}`}
+                        aria-label={`選択肢 ${index + 1}: ${getChoiceText(choice, snapshot.player.mental)}`}
                       >
                         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-stone-950 text-base font-bold text-white transition group-hover:bg-teal-700">
                           {index + 1}
                         </span>
                         <span>
+                          <span className="mb-1 block text-xs font-bold text-teal-800">{toneLabels[choice.tone]}</span>
                           <span className="block text-lg font-bold leading-8 text-stone-950">{getChoiceText(choice, snapshot.player.mental)}</span>
                           <span className="mt-2 block border-l-2 border-stone-300 pl-3 text-sm leading-6 text-stone-600">{choice.intent}</span>
                         </span>
@@ -784,20 +372,41 @@ export function Game() {
                   </div>
                 </div>
               ) : (
-                <div className="mt-5 flex flex-wrap gap-3">
+                <div>
+                  <div className="rounded-md border border-teal-200 bg-teal-50 p-4">
+                    <h2 className="font-bold text-teal-950">今回の振り返り</h2>
+                    <ul className="mt-3 grid gap-2 text-sm leading-7 text-teal-950">{debrief.map((note) => <li key={note}>・{note}</li>)}</ul>
+                    <div className="mt-4 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+                      {[['警戒', snapshot.hidden.caution], ['興味', snapshot.hidden.interest], ['ノリ', snapshot.hidden.vibe], ['時間圧', snapshot.hidden.timePressure]].map(([label, value]) => <p key={label} className="rounded bg-white px-3 py-2"><span className="block text-xs text-stone-500">{label}</span><span className="font-bold">{value} / 8</span></p>)}
+                    </div>
+                    <p className="mt-3 text-xs leading-6 text-teal-900">数値は終了後に公開。会話ログで、どの返しが空気を変えたか確認できます。</p>
+                  </div>
+                  <div className="mt-5 flex flex-wrap gap-3">
                   <button
                     type="button"
-                    onClick={restart}
+                    onClick={() => restart(true)}
+                    className="rounded-md border-2 border-teal-800 bg-white px-5 py-3 text-base font-bold text-teal-900 transition hover:bg-teal-50 focus:outline-none focus:ring-2 focus:ring-teal-700 focus:ring-offset-2"
+                  >同じ相手に再挑戦</button>
+                  <button
+                    type="button"
+                    onClick={() => restart()}
                     className="rounded-md bg-stone-950 px-5 py-3 text-base font-bold text-white transition hover:bg-teal-800 focus:outline-none focus:ring-2 focus:ring-teal-700 focus:ring-offset-2"
                   >
-                    もう一度遊ぶ
+                    新しい相手で遊ぶ
                   </button>
+                  </div>
+                  <p className="mt-3 text-xs leading-6 text-stone-500">再挑戦では初期状態と反応の揺れを再現。選び方を変えて試せます。</p>
                 </div>
               )}
+              </div>
             </div>
           </section>
 
           <aside className="grid content-start gap-4 xl:sticky xl:top-5">
+            <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
+              <h2 className="text-base font-bold text-stone-950">エンディング記録 <span className="text-teal-700">{collection.length} / {Object.keys(endings).length}</span></h2>
+              <div className="mt-3 flex flex-wrap gap-2">{Object.values(endings).map((ending) => <span key={ending.id} className={`rounded-full border px-3 py-1 text-xs ${collection.includes(ending.id) ? 'border-teal-200 bg-teal-50 font-bold text-teal-900' : 'border-stone-200 bg-stone-50 text-stone-400'}`}>{collection.includes(ending.id) ? ending.title : '未発見'}</span>)}</div>
+            </section>
             <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
               <h2 className="text-base font-bold text-stone-950">今回の相手</h2>
               <p className="mt-3 text-sm font-bold leading-6 text-stone-900">{snapshot.target.label}</p>
@@ -805,7 +414,8 @@ export function Game() {
             </section>
 
             <section className="rounded-md border border-stone-200 bg-white p-4 shadow-sm">
-              <h2 className="text-base font-bold text-stone-950">曖昧なヒント</h2>
+              <h2 className="text-base font-bold text-stone-950">観察メモ</h2>
+              <p className="mt-2 text-xs leading-6 text-stone-500">返答ごとに時間が進みます。質問→受け止める、など会話のつながりも大切。</p>
               <div className="mt-3 grid gap-3">
                 {hints.map((hint) => (
                   <p key={hint} className="border-l-4 border-indigo-600 bg-indigo-50 px-3 py-2 text-sm leading-6 text-stone-700">
@@ -832,6 +442,9 @@ export function Game() {
                     <li key={`${log.phase}-${index}`} className="border-l-4 border-stone-300 pl-3">
                       <p className="text-xs font-bold text-stone-500">{log.phase}</p>
                       <p className="mt-1 text-sm leading-6 text-stone-800">{log.choiceText}</p>
+                      <p className={`mt-2 rounded border px-2 py-1 text-sm leading-6 ${moodClass[log.mood]}`}>{log.reply}</p>
+                      {log.feedback.map((note) => <p key={note} className="mt-1 text-xs leading-6 text-teal-800">{note}</p>)}
+                      {snapshot.ending && <p className="mt-2 text-xs leading-6 text-stone-500">警戒 {log.before.caution}→{log.after.caution} / 興味 {log.before.interest}→{log.after.interest} / ノリ {log.before.vibe}→{log.after.vibe} / 時間圧 {log.before.timePressure}→{log.after.timePressure}</p>}
                     </li>
                   ))
                 )}
